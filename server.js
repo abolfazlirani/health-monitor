@@ -54,6 +54,18 @@ app.listen(PORT, () => {
   // Initialize Telegram service
   if (telegramService.initialize()) {
     console.log('✅ Telegram alerts enabled');
+
+    // Start scheduled checks every 15 minutes
+    const thresholds = {
+      cpu: parseFloat(process.env.CPU_THRESHOLD) || 80,
+      memory: parseFloat(process.env.MEMORY_THRESHOLD) || 80,
+      disk: parseFloat(process.env.DISK_THRESHOLD) || 80
+    };
+
+    telegramService.startScheduledReports(
+      () => systemMonitor.getSystemHealth(),
+      thresholds
+    );
   }
 
   // Initialize monitoring with alerts
@@ -66,13 +78,24 @@ app.listen(PORT, () => {
     };
 
     if (data.cpu.usage > thresholds.cpu) {
-      telegramService.sendAlert('CPU', data.cpu.usage, thresholds.cpu);
+      telegramService.sendAlert('cpu', data.cpu.usage, thresholds.cpu, {
+        topProcesses: data.cpu.topProcesses || []
+      });
     }
     if (data.memory.usage > thresholds.memory) {
-      telegramService.sendAlert('Memory', data.memory.usage, thresholds.memory);
+      telegramService.sendAlert('memory', data.memory.usage, thresholds.memory, {
+        total: data.memory.total,
+        used: data.memory.used,
+        free: data.memory.free,
+        topProcesses: data.memory.topProcesses || []
+      });
     }
     if (data.disk.usage > thresholds.disk) {
-      telegramService.sendAlert('Disk', data.disk.usage, thresholds.disk);
+      telegramService.sendAlert('disk', data.disk.usage, thresholds.disk, {
+        total: data.disk.total,
+        used: data.disk.used,
+        free: data.disk.free
+      });
     }
   });
 });

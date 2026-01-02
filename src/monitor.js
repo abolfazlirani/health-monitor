@@ -10,6 +10,33 @@ class SystemMonitor {
     this.lastData = null;
   }
 
+  async getTopProcesses(sortBy = 'cpu', limit = 5) {
+    try {
+      const processes = await si.processes();
+
+      // Sort by CPU or memory
+      const sorted = processes.list.sort((a, b) => {
+        if (sortBy === 'cpu') {
+          return (b.cpu || 0) - (a.cpu || 0);
+        } else {
+          return (b.mem || 0) - (a.mem || 0);
+        }
+      });
+
+      return sorted.slice(0, limit).map(p => ({
+        pid: p.pid,
+        name: p.name,
+        user: p.user || 'unknown',
+        cpu: (p.cpu || 0).toFixed(1),
+        mem: (p.mem || 0).toFixed(1),
+        command: (p.command || '').substring(0, 50)
+      }));
+    } catch (error) {
+      console.error('Error getting top processes:', error);
+      return [];
+    }
+  }
+
   async getSystemHealth() {
     try {
       const [cpu, mem, fs] = await Promise.all([
@@ -19,22 +46,37 @@ class SystemMonitor {
       ]);
 
       const cpuUsage = Math.round(cpu.currentLoad || 0);
-      const memUsage = Math.round((mem.used / mem.total) * 100);
-      const diskUsage = fs.length > 0 
+      // Use active memory (excludes cache/buffers) for accurate usage like htop
+      const activeMemory = mem.active || mem.used;
+      const memUsage = Math.round((activeMemory / mem.total) * 100);
+      const diskUsage = fs.length > 0
         ? Math.round((fs[0].used / fs[0].size) * 100)
         : 0;
+
+      // Get top processes when usage is high
+      let topCpuProcesses = [];
+      let topMemProcesses = [];
+
+      if (cpuUsage > 50) {
+        topCpuProcesses = await this.getTopProcesses('cpu', 3);
+      }
+      if (memUsage > 50) {
+        topMemProcesses = await this.getTopProcesses('mem', 3);
+      }
 
       return {
         cpu: {
           usage: cpuUsage,
           cores: cpu.cpus?.length || 0,
-          model: cpu.cpus?.[0]?.model || 'Unknown'
+          model: cpu.cpus?.[0]?.model || 'Unknown',
+          topProcesses: topCpuProcesses
         },
         memory: {
           usage: memUsage,
           total: Math.round(mem.total / 1024 / 1024 / 1024), // GB
-          used: Math.round(mem.used / 1024 / 1024 / 1024), // GB
-          free: Math.round(mem.free / 1024 / 1024 / 1024) // GB
+          used: Math.round(activeMemory / 1024 / 1024 / 1024), // GB (active, not used)
+          free: Math.round(mem.available / 1024 / 1024 / 1024), // GB (available, not free)
+          topProcesses: topMemProcesses
         },
         disk: {
           usage: diskUsage,
@@ -125,7 +167,7 @@ class SystemMonitor {
 
       const containers = stdout.trim().split('\n').map(line => {
         const [id, name, cpu, memUsage, memPerc, netIO, blockIO, pids] = line.split('|');
-        
+
         // Parse memory usage (e.g., "61.4MiB / 7.762GiB")
         const memParts = memUsage.split(' / ');
         const used = memParts[0] || '0';
@@ -182,12 +224,12 @@ class SystemMonitor {
   async getNodeProcesses() {
     try {
       const processes = await si.processes();
-      
+
       // Filter for Node.js processes (excluding PM2 and this process)
       const nodeProcs = processes.list
-        .filter(proc => 
-          proc.command && 
-          proc.command.includes('node') && 
+        .filter(proc =>
+          proc.command &&
+          proc.command.includes('node') &&
           !proc.command.includes('pm2') &&
           proc.pid !== process.pid
         )
@@ -218,10 +260,10 @@ class SystemMonitor {
       // Calculate totals
       const dockerTotalCPU = docker.reduce((sum, c) => sum + c.cpu, 0);
       const dockerTotalMem = docker.reduce((sum, c) => sum + c.memory.usage, 0);
-      
+
       const pm2TotalCPU = pm2.reduce((sum, p) => sum + p.cpu, 0);
       const pm2TotalMem = pm2.reduce((sum, p) => sum + p.memory, 0);
-      
+
       const nodeTotalCPU = node.reduce((sum, p) => sum + p.cpu, 0);
       const nodeTotalMem = node.reduce((sum, p) => sum + p.memory, 0);
 
@@ -260,18 +302,18 @@ class SystemMonitor {
     this.monitoringInterval = setInterval(async () => {
       try {
         const healthData = await this.getSystemHealth();
-        
+
         // Only trigger callback if values increased significantly
         if (this.lastData) {
           const cpuIncreased = healthData.cpu.usage > this.lastData.cpu.usage;
           const memIncreased = healthData.memory.usage > this.lastData.memory.usage;
           const diskIncreased = healthData.disk.usage > this.lastData.disk.usage;
-          
+
           if (cpuIncreased || memIncreased || diskIncreased) {
             callback(healthData);
           }
         }
-        
+
         this.lastData = healthData;
       } catch (error) {
         console.error('Error in monitoring loop:', error);

@@ -8,9 +8,40 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Authentication credentials from environment
+const AUTH_USER = process.env.AUTH_USER || 'admin';
+const AUTH_PASS = process.env.AUTH_PASS || 'admin123';
+
+// Basic Authentication Middleware
+const basicAuth = (req, res, next) => {
+  // Skip auth for health check endpoint (optional)
+  if (req.path === '/api/ping') {
+    return next();
+  }
+
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Health Monitor"');
+    return res.status(401).send('Authentication required');
+  }
+
+  const base64Credentials = authHeader.split(' ')[1];
+  const credentials = Buffer.from(base64Credentials, 'base64').toString('ascii');
+  const [username, password] = credentials.split(':');
+
+  if (username === AUTH_USER && password === AUTH_PASS) {
+    return next();
+  }
+
+  res.setHeader('WWW-Authenticate', 'Basic realm="Health Monitor"');
+  return res.status(401).send('Invalid credentials');
+};
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(basicAuth); // Add authentication
 app.use(express.static(path.join(__dirname, 'public')));
 
 // API Routes

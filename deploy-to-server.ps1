@@ -24,6 +24,8 @@ DISK_THRESHOLD=80
 TELEGRAM_BOT_TOKEN=8510543120:AAHvuoS6tMEloGwyfbYZeg4AA-OFHj7Vw5Y
 TELEGRAM_CHAT_ID=893663453
 TELEGRAM_PROXY_URL=https://asarmulticenter.ir/canBot/health-chech.php
+AUTH_USER=1641
+AUTH_PASS=1641
 "@
 
 # Save .env temporarily

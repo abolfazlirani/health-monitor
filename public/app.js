@@ -323,7 +323,13 @@ class HealthDashboard {
 
         setInterval(() => {
             this.updateDetailedStats();
+            this.updateNetworkData();
+            this.updateTopProcesses();
         }, this.updateInterval * 2);
+
+        // Initial load
+        this.updateNetworkData();
+        this.updateTopProcesses();
     }
 
     stopAutoUpdate() {
@@ -332,8 +338,202 @@ class HealthDashboard {
             this.intervalId = null;
         }
     }
+
+    // ==================== NETWORK MONITORING ====================
+
+    async updateNetworkData() {
+        try {
+            const response = await fetch('/api/network');
+            const data = await response.json();
+
+            this.updateBackendList(data.backends || []);
+            this.updatePingList(data.ping || []);
+            this.updateBandwidth(data.stats || {});
+            this.updatePortsList(data.ports?.ports || []);
+        } catch (error) {
+            console.error('Error updating network data:', error);
+        }
+    }
+
+    updateBackendList(backends) {
+        const container = document.getElementById('backend-list');
+        if (!container) return;
+
+        if (backends.length === 0) {
+            container.innerHTML = '<div class="empty-state"><span class="empty-icon">🔍</span><p>No backends configured</p></div>';
+            return;
+        }
+
+        container.innerHTML = backends.map(b => `
+            <div class="backend-item ${b.status}">
+                <div class="backend-info">
+                    <div class="backend-name">${b.name}</div>
+                    <div class="backend-url">${b.url}</div>
+                </div>
+                <div class="backend-status">
+                    <span class="backend-badge ${b.status}">
+                        ${b.status === 'healthy' ? '✓ Healthy' :
+                b.status === 'degraded' ? '⚠ Degraded' :
+                    '✗ Down'}
+                    </span>
+                    ${b.responseTime ? `<div class="backend-time">${b.responseTime}ms</div>` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    updatePingList(pingData) {
+        const container = document.getElementById('ping-list');
+        if (!container || pingData.length === 0) return;
+
+        container.innerHTML = pingData.map(p => `
+            <div class="ping-item">
+                <span class="host">${p.host}</span>
+                <span class="latency ${p.status}">
+                    ${p.status === 'online' ? p.latency + ' ms' : 'Offline'}
+                </span>
+            </div>
+        `).join('');
+    }
+
+    updateBandwidth(stats) {
+        const rxSpeed = document.getElementById('rx-speed');
+        const txSpeed = document.getElementById('tx-speed');
+        const activeConn = document.getElementById('active-conn');
+
+        if (rxSpeed) rxSpeed.textContent = (stats.rxSec || 0) + ' KB/s';
+        if (txSpeed) txSpeed.textContent = (stats.txSec || 0) + ' KB/s';
+        if (activeConn) activeConn.textContent = stats.activeConnections || 0;
+    }
+
+    updatePortsList(ports) {
+        const container = document.getElementById('ports-list');
+        if (!container) return;
+
+        if (ports.length === 0) {
+            container.innerHTML = '<div class="empty-state"><span class="empty-icon">🔌</span><p>No open ports</p></div>';
+            return;
+        }
+
+        container.innerHTML = ports.slice(0, 20).map(p => `
+            <span class="port-badge" title="${p.process || 'unknown'}">${p.port}</span>
+        `).join('');
+    }
+
+    // ==================== PROCESS MANAGEMENT ====================
+
+    async updateTopProcesses() {
+        try {
+            const response = await fetch('/api/health');
+            const data = await response.json();
+
+            const container = document.getElementById('top-processes');
+            if (!container) return;
+
+            const processes = data.cpu?.topProcesses || [];
+
+            if (processes.length === 0) {
+                container.innerHTML = '<div class="empty-state"><span class="empty-icon">✅</span><p>No high CPU processes</p></div>';
+                return;
+            }
+
+            container.innerHTML = processes.map(p => `
+                <div class="process-item">
+                    <div class="process-info">
+                        <div class="process-name">${p.name} (${p.user})</div>
+                        <div class="process-stats">PID: ${p.pid} | CPU: ${p.cpu}% | MEM: ${p.mem}%</div>
+                    </div>
+                    <div class="process-actions">
+                        <button class="kill-btn" onclick="dashboard.killProcess(${p.pid})">Kill</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Error updating top processes:', error);
+        }
+    }
+
+    async killProcess(pid) {
+        if (!confirm(`Are you sure you want to kill process ${pid}?`)) return;
+
+        try {
+            const response = await fetch('/api/process/kill', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pid })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                alert('Process killed successfully');
+                this.updateTopProcesses();
+                this.updateApplications();
+            } else {
+                alert('Failed to kill process: ' + result.message);
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+
+    async runQuickCommand(command) {
+        const output = document.getElementById('command-output');
+        if (!output) return;
+
+        output.innerHTML = '<pre>Running...</pre>';
+
+        try {
+            const response = await fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                output.innerHTML = `<pre>${result.output}</pre>`;
+            } else {
+                output.innerHTML = `<pre style="color: #ff5a5f;">Error: ${result.message}</pre>`;
+            }
+        } catch (error) {
+            output.innerHTML = `<pre style="color: #ff5a5f;">Error: ${error.message}</pre>`;
+        }
+    }
+
+    async restartPM2(name) {
+        if (!confirm(`Restart PM2 process "${name}"?`)) return;
+
+        try {
+            const response = await fetch('/api/pm2/restart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const result = await response.json();
+            alert(result.success ? 'Restarted successfully' : 'Failed: ' + result.message);
+            this.updateApplications();
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+
+    async restartDocker(name) {
+        if (!confirm(`Restart Docker container "${name}"?`)) return;
+
+        try {
+            const response = await fetch('/api/docker/restart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const result = await response.json();
+            alert(result.success ? 'Restarted successfully' : 'Failed: ' + result.message);
+            this.updateApplications();
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    new HealthDashboard();
-});
+const dashboard = new HealthDashboard();
+

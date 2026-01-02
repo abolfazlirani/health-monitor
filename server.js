@@ -72,6 +72,107 @@ app.get('/api/applications', async (req, res) => {
   }
 });
 
+// ==================== PROCESS MANAGEMENT ====================
+
+app.post('/api/process/kill', async (req, res) => {
+  try {
+    const { pid } = req.body;
+    if (!pid) return res.status(400).json({ error: 'PID required' });
+    const result = await systemMonitor.killProcess(pid);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/pm2/restart', async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'Process name required' });
+    const result = await systemMonitor.restartPM2(name);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/pm2/stop', async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'Process name required' });
+    const result = await systemMonitor.stopPM2(name);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/docker/restart', async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'Container name required' });
+    const result = await systemMonitor.restartDocker(name);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/docker/stop', async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'Container name required' });
+    const result = await systemMonitor.stopDocker(name);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/command', async (req, res) => {
+  try {
+    const { command } = req.body;
+    if (!command) return res.status(400).json({ error: 'Command required' });
+    const result = await systemMonitor.runCommand(command);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== NETWORK MONITORING ====================
+
+app.get('/api/network', async (req, res) => {
+  try {
+    const overview = await systemMonitor.getNetworkOverview();
+    res.json(overview);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/network/ping', async (req, res) => {
+  try {
+    const { host } = req.body;
+    if (!host) return res.status(400).json({ error: 'Host required' });
+    const result = await systemMonitor.pingHost(host);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/network/check', async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: 'URL required' });
+    const result = await systemMonitor.checkHttpUptime(url);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve dashboard
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

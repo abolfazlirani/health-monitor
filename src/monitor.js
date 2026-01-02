@@ -332,6 +332,306 @@ class SystemMonitor {
       this.monitoringInterval = null;
     }
   }
+
+  // ==================== PROCESS MANAGEMENT ====================
+
+  async killProcess(pid) {
+    try {
+      await execPromise(`kill -9 ${pid}`);
+      return { success: true, message: `Process ${pid} killed` };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  }
+
+  async restartPM2(name) {
+    try {
+      const { stdout } = await execPromise(`pm2 restart ${name}`);
+      return { success: true, message: stdout };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  }
+
+  async stopPM2(name) {
+    try {
+      const { stdout } = await execPromise(`pm2 stop ${name}`);
+      return { success: true, message: stdout };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  }
+
+  async restartDocker(name) {
+    try {
+      const { stdout } = await execPromise(`docker restart ${name}`);
+      return { success: true, message: stdout };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  }
+
+  async stopDocker(name) {
+    try {
+      const { stdout } = await execPromise(`docker stop ${name}`);
+      return { success: true, message: stdout };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  }
+
+  async runCommand(command) {
+    // Whitelist of allowed commands for security
+    const allowedCommands = ['uptime', 'whoami', 'hostname', 'df -h', 'free -h', 'ps aux', 'top -bn1'];
+    const isAllowed = allowedCommands.some(cmd => command.startsWith(cmd));
+
+    if (!isAllowed) {
+      return { success: false, message: 'Command not allowed. Allowed: ' + allowedCommands.join(', ') };
+    }
+
+    try {
+      const { stdout, stderr } = await execPromise(command, { timeout: 10000 });
+      return { success: true, output: stdout || stderr };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  }
+
+  // ==================== NETWORK MONITORING ====================
+
+  async pingHost(host) {
+    try {
+      const start = Date.now();
+      const { stdout } = await execPromise(`ping -c 1 -W 2 ${host}`);
+      const latency = Date.now() - start;
+
+      // Extract time from ping output
+      const match = stdout.match(/time[=<](\d+\.?\d*)/);
+      const actualLatency = match ? parseFloat(match[1]) : latency;
+
+      return {
+        host,
+        status: 'online',
+        latency: Math.round(actualLatency),
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      return {
+        host,
+        status: 'offline',
+        latency: null,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  async checkHttpUptime(url) {
+    const https = require('https');
+    const http = require('http');
+    const { URL } = require('url');
+
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const parsedUrl = new URL(url);
+      const protocol = parsedUrl.protocol === 'https:' ? https : http;
+
+      const req = protocol.request(url, { method: 'HEAD', timeout: 5000 }, (res) => {
+        const responseTime = Date.now() - start;
+        resolve({
+          url,
+          status: 'up',
+          statusCode: res.statusCode,
+          responseTime,
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      req.on('error', (error) => {
+        resolve({
+          url,
+          status: 'down',
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      req.on('timeout', () => {
+        req.destroy();
+        resolve({
+          url,
+          status: 'down',
+          error: 'Timeout',
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      req.end();
+    });
+  }
+
+  async getNetworkStats() {
+    try {
+      const [networkStats, networkInterfaces, networkConnections] = await Promise.all([
+        si.networkStats(),
+        si.networkInterfaces(),
+        si.networkConnections()
+      ]);
+
+      const mainInterface = networkStats.find(n => n.iface !== 'lo') || networkStats[0];
+
+      return {
+        interface: mainInterface?.iface || 'unknown',
+        rxBytes: mainInterface?.rx_bytes || 0,
+        txBytes: mainInterface?.tx_bytes || 0,
+        rxSec: Math.round((mainInterface?.rx_sec || 0) / 1024), // KB/s
+        txSec: Math.round((mainInterface?.tx_sec || 0) / 1024), // KB/s
+        totalConnections: networkConnections.length,
+        activeConnections: networkConnections.filter(c => c.state === 'ESTABLISHED').length,
+        interfaces: networkInterfaces.map(i => ({
+          name: i.iface,
+          ip: i.ip4,
+          mac: i.mac,
+          type: i.type
+        })),
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error getting network stats:', error);
+      return { error: error.message };
+    }
+  }
+
+  async getOpenPorts() {
+    try {
+      const connections = await si.networkConnections();
+
+      // Get unique listening ports
+      const listeningPorts = connections
+        .filter(c => c.state === 'LISTEN')
+        .reduce((acc, c) => {
+          if (!acc.find(p => p.port === c.localPort)) {
+            acc.push({
+              port: c.localPort,
+              protocol: c.protocol,
+              process: c.process || 'unknown',
+              pid: c.pid
+            });
+          }
+          return acc;
+        }, [])
+        .sort((a, b) => a.port - b.port);
+
+      return {
+        ports: listeningPorts,
+        total: listeningPorts.length,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error getting open ports:', error);
+      return { error: error.message, ports: [] };
+    }
+  }
+
+  async getNetworkOverview() {
+    const [stats, ports] = await Promise.all([
+      this.getNetworkStats(),
+      this.getOpenPorts()
+    ]);
+
+    // Ping hosting providers
+    const pingResults = await Promise.all([
+      this.pingHost('liara.ir'),
+      this.pingHost('parspack.com'),
+      this.pingHost('google.com')
+    ]);
+
+    // Backend health checks
+    const backendChecks = await Promise.all([
+      this.checkBackendHealth('StorySaz', 'https://api.storysazapp.ir/api/v2/home', 'status', 200),
+      this.checkBackendHealth('Hooman AI', 'https://api.hooman-ai.ir/api/v1/splash', 'success', true),
+      this.checkBackendHealth('Linux Backend', 'https://linux-laptop.ir/api/v1/auth/send-otp', 'message', 'Not Found')
+    ]);
+
+    return {
+      stats,
+      ports,
+      ping: pingResults,
+      backends: backendChecks,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  async checkBackendHealth(name, url, expectedKey, expectedValue) {
+    const https = require('https');
+    const http = require('http');
+    const { URL } = require('url');
+
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const parsedUrl = new URL(url);
+      const protocol = parsedUrl.protocol === 'https:' ? https : http;
+
+      const req = protocol.request(url, {
+        method: 'GET',
+        timeout: 10000,
+        rejectUnauthorized: false
+      }, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          const responseTime = Date.now() - start;
+          try {
+            const json = JSON.parse(data);
+            const isHealthy = json[expectedKey] === expectedValue;
+            resolve({
+              name,
+              url,
+              status: isHealthy ? 'healthy' : 'degraded',
+              statusCode: res.statusCode,
+              responseTime,
+              expectedKey,
+              actualValue: json[expectedKey],
+              expectedValue,
+              timestamp: new Date().toISOString()
+            });
+          } catch (e) {
+            resolve({
+              name,
+              url,
+              status: 'error',
+              error: 'Invalid JSON response',
+              responseTime,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        resolve({
+          name,
+          url,
+          status: 'down',
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      req.on('timeout', () => {
+        req.destroy();
+        resolve({
+          name,
+          url,
+          status: 'down',
+          error: 'Timeout',
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      req.end();
+    });
+  }
 }
 
 module.exports = new SystemMonitor();

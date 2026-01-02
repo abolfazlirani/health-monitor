@@ -221,6 +221,76 @@
             </div>
         </section>
 
+        <!-- Network Monitoring Section -->
+        <section class="apps-section">
+            <div class="section-title">
+                <span class="title-icon">🌐</span>
+                <h2>Network Monitoring</h2>
+                <button class="refresh-btn" onclick="dashboard.updateNetworkData()">🔄 Refresh</button>
+            </div>
+            <div class="network-grid">
+                <div class="network-card backend-card">
+                    <h3>🏢 Backend Health</h3>
+                    <div class="backend-list" id="backend-list">
+                        <div class="empty-state"><span class="empty-icon">🔍</span>
+                            <p>Checking...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="network-card">
+                    <h3>📡 Ping Status</h3>
+                    <div class="ping-list" id="ping-list">
+                        <div class="empty-state"><span class="empty-icon">📡</span>
+                            <p>Loading...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="network-card">
+                    <h3>📊 Bandwidth</h3>
+                    <div class="bandwidth-stats" id="bandwidth-stats">
+                        <div class="stat-row"><span>Download</span><strong id="rx-speed">0 KB/s</strong></div>
+                        <div class="stat-row"><span>Upload</span><strong id="tx-speed">0 KB/s</strong></div>
+                        <div class="stat-row"><span>Active Connections</span><strong id="active-conn">0</strong></div>
+                    </div>
+                </div>
+                <div class="network-card">
+                    <h3>🔌 Open Ports</h3>
+                    <div class="ports-list" id="ports-list">
+                        <div class="empty-state"><span class="empty-icon">🔌</span>
+                            <p>Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Process Management Section -->
+        <section class="apps-section">
+            <div class="section-title">
+                <span class="title-icon">🎛️</span>
+                <h2>Process Management</h2>
+            </div>
+            <div class="management-grid">
+                <div class="management-card">
+                    <h3>Quick Actions</h3>
+                    <div class="action-buttons">
+                        <button class="action-btn" onclick="dashboard.runQuickCommand('uptime')">Uptime</button>
+                        <button class="action-btn" onclick="dashboard.runQuickCommand('free -h')">Memory</button>
+                        <button class="action-btn" onclick="dashboard.runQuickCommand('df -h')">Disk</button>
+                    </div>
+                    <div class="command-output" id="command-output">
+                        <pre>Click a button to run command</pre>
+                    </div>
+                </div>
+                <div class="management-card">
+                    <h3>Top Processes</h3>
+                    <div class="top-processes" id="top-processes">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Footer -->
         <footer class="footer">
             <p>Health Monitor Dashboard • Built with Node.js</p>

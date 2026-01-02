@@ -1,0 +1,19 @@
+[Unit]
+Description=Health Monitor Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/health-check
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/health-check/.env
+ExecStart=/usr/bin/node /opt/health-check/server.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

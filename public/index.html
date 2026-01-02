@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Health Monitor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="background-effects">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <span class="logo-icon">⚡</span>
+                    <h1>Health Monitor</h1>
+                </div>
+                <span class="version-badge">v2.0</span>
+            </div>
+            <div class="header-right">
+                <div class="live-indicator">
+                    <span class="pulse-dot"></span>
+                    <span>Live</span>
+                </div>
+                <div class="last-update" id="last-update">--:--:--</div>
+                <button class="refresh-btn" id="refresh-btn">
+                    <span class="refresh-icon">↻</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- System Stats Grid -->
+        <section class="stats-section">
+            <div class="section-title">
+                <span class="title-icon">📊</span>
+                <h2>System Overview</h2>
+            </div>
+            <div class="stats-grid">
+                <!-- CPU Card -->
+                <div class="stat-card" data-type="cpu">
+                    <div class="card-glow"></div>
+                    <div class="stat-header">
+                        <div class="stat-icon">💻</div>
+                        <span class="stat-label">CPU Usage</span>
+                    </div>
+                    <div class="stat-body">
+                        <div class="circular-progress" id="cpu-circle">
+                            <svg viewBox="0 0 100 100">
+                                <circle class="progress-bg" cx="50" cy="50" r="45"></circle>
+                                <circle class="progress-ring" cx="50" cy="50" r="45"></circle>
+                            </svg>
+                            <div class="progress-value">
+                                <span class="value" id="cpu-usage">0</span>
+                                <span class="unit">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-footer">
+                        <div class="stat-detail">
+                            <span class="detail-label">Cores</span>
+                            <span class="detail-value" id="cpu-cores">0</span>
+                        </div>
+                        <div class="stat-detail">
+                            <span class="detail-label">Model</span>
+                            <span class="detail-value truncate" id="cpu-model">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Memory Card -->
+                <div class="stat-card" data-type="memory">
+                    <div class="card-glow"></div>
+                    <div class="stat-header">
+                        <div class="stat-icon">🧠</div>
+                        <span class="stat-label">Memory</span>
+                    </div>
+                    <div class="stat-body">
+                        <div class="circular-progress" id="memory-circle">
+                            <svg viewBox="0 0 100 100">
+                                <circle class="progress-bg" cx="50" cy="50" r="45"></circle>
+                                <circle class="progress-ring" cx="50" cy="50" r="45"></circle>
+                            </svg>
+                            <div class="progress-value">
+                                <span class="value" id="memory-usage">0</span>
+                                <span class="unit">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-footer">
+                        <div class="stat-detail">
+                            <span class="detail-label">Used</span>
+                            <span class="detail-value" id="memory-used">0 GB</span>
+                        </div>
+                        <div class="stat-detail">
+                            <span class="detail-label">Total</span>
+                            <span class="detail-value" id="memory-total">0 GB</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Disk Card -->
+                <div class="stat-card" data-type="disk">
+                    <div class="card-glow"></div>
+                    <div class="stat-header">
+                        <div class="stat-icon">💾</div>
+                        <span class="stat-label">Disk Space</span>
+                    </div>
+                    <div class="stat-body">
+                        <div class="circular-progress" id="disk-circle">
+                            <svg viewBox="0 0 100 100">
+                                <circle class="progress-bg" cx="50" cy="50" r="45"></circle>
+                                <circle class="progress-ring" cx="50" cy="50" r="45"></circle>
+                            </svg>
+                            <div class="progress-value">
+                                <span class="value" id="disk-usage">0</span>
+                                <span class="unit">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-footer">
+                        <div class="stat-detail">
+                            <span class="detail-label">Used</span>
+                            <span class="detail-value" id="disk-used">0 GB</span>
+                        </div>
+                        <div class="stat-detail">
+                            <span class="detail-label">Total</span>
+                            <span class="detail-value" id="disk-total">0 GB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Applications Section -->
+        <section class="apps-section">
+            <div class="section-title">
+                <span class="title-icon">🚀</span>
+                <h2>Running Applications</h2>
+            </div>
+
+            <div class="tabs-container">
+                <div class="tabs">
+                    <button class="tab active" data-tab="docker">
+                        <span class="tab-icon">🐳</span>
+                        <span class="tab-label">Docker</span>
+                        <span class="tab-badge" id="docker-count">0</span>
+                    </button>
+                    <button class="tab" data-tab="pm2">
+                        <span class="tab-icon">⚡</span>
+                        <span class="tab-label">PM2</span>
+                        <span class="tab-badge" id="pm2-count">0</span>
+                    </button>
+                    <button class="tab" data-tab="node">
+                        <span class="tab-icon">📦</span>
+                        <span class="tab-label">Node.js</span>
+                        <span class="tab-badge" id="node-count">0</span>
+                    </button>
+                </div>
+
+                <div class="tabs-summary">
+                    <div class="summary-item" id="current-cpu">
+                        <span class="summary-label">CPU</span>
+                        <span class="summary-value">0%</span>
+                    </div>
+                    <div class="summary-item" id="current-mem">
+                        <span class="summary-label">Memory</span>
+                        <span class="summary-value">0 MB</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-panels">
+                <div class="tab-panel active" id="docker-panel">
+                    <div class="app-grid" id="docker-list">
+                        <div class="empty-state">
+                            <span class="empty-icon">🐳</span>
+                            <p>No Docker containers running</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-panel" id="pm2-panel">
+                    <div class="app-grid" id="pm2-list">
+                        <div class="empty-state">
+                            <span class="empty-icon">⚡</span>
+                            <p>No PM2 processes running</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-panel" id="node-panel">
+                    <div class="app-grid" id="node-list">
+                        <div class="empty-state">
+                            <span class="empty-icon">📦</span>
+                            <p>No Node.js processes running</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- System Details -->
+        <section class="details-section">
+            <div class="section-title">
+                <span class="title-icon">⚙️</span>
+                <h2>System Details</h2>
+            </div>
+            <div class="details-grid" id="details-grid">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Health Monitor Dashboard • Built with Node.js</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

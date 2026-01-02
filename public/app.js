@@ -1,0 +1,339 @@
+class HealthDashboard {
+    constructor() {
+        this.apiUrl = '/api/health';
+        this.statsUrl = '/api/stats';
+        this.appsUrl = '/api/applications';
+        this.updateInterval = 5000;
+        this.intervalId = null;
+        this.init();
+    }
+
+    init() {
+        this.injectSVGGradient();
+        this.updateHealthData();
+        this.updateApplications();
+        this.updateDetailedStats();
+        this.startAutoUpdate();
+        this.setupEventListeners();
+        this.setupTabs();
+    }
+
+    injectSVGGradient() {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.style.width = '0';
+        svg.style.height = '0';
+        svg.style.position = 'absolute';
+        svg.innerHTML = `
+            <defs>
+                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#00ced1" />
+                    <stop offset="50%" style="stop-color:#00ffff" />
+                    <stop offset="100%" style="stop-color:#7fffd4" />
+                </linearGradient>
+            </defs>
+        `;
+        document.body.insertBefore(svg, document.body.firstChild);
+    }
+
+    setupTabs() {
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                document.querySelectorAll('.tab-panel').forEach(panel => {
+                    panel.classList.remove('active');
+                });
+                document.getElementById(`${tabName}-panel`).classList.add('active');
+            });
+        });
+    }
+
+    setupEventListeners() {
+        const refreshBtn = document.getElementById('refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                this.updateHealthData();
+                this.updateApplications();
+                this.updateDetailedStats();
+            });
+        }
+    }
+
+    async fetchData(url) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            return null;
+        }
+    }
+
+    updateCircularProgress(id, value) {
+        const circle = document.querySelector(`#${id} .progress-ring`);
+        if (circle) {
+            const circumference = 283; // 2 * PI * 45
+            const offset = circumference - (value / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+
+            // Update color based on value
+            if (value >= 80) {
+                circle.style.stroke = '#ff4757';
+            } else if (value >= 60) {
+                circle.style.stroke = '#ffaa00';
+            } else {
+                circle.style.stroke = 'url(#gradient)';
+            }
+        }
+    }
+
+    async updateHealthData() {
+        const data = await this.fetchData(this.apiUrl);
+        if (!data) return;
+
+        // Update CPU
+        document.getElementById('cpu-usage').textContent = data.cpu.usage;
+        this.updateCircularProgress('cpu-circle', data.cpu.usage);
+        document.getElementById('cpu-cores').textContent = data.cpu.cores;
+        document.getElementById('cpu-model').textContent = (data.cpu.model || 'Unknown').substring(0, 20);
+
+        // Update Memory
+        document.getElementById('memory-usage').textContent = data.memory.usage;
+        this.updateCircularProgress('memory-circle', data.memory.usage);
+        document.getElementById('memory-used').textContent = `${data.memory.used} GB`;
+        document.getElementById('memory-total').textContent = `${data.memory.total} GB`;
+
+        // Update Disk
+        document.getElementById('disk-usage').textContent = data.disk.usage;
+        this.updateCircularProgress('disk-circle', data.disk.usage);
+        document.getElementById('disk-used').textContent = `${data.disk.used} GB`;
+        document.getElementById('disk-total').textContent = `${data.disk.total} GB`;
+
+        // Update timestamp
+        const now = new Date();
+        document.getElementById('last-update').textContent =
+            now.toLocaleTimeString('en-US', { hour12: false });
+    }
+
+    async updateApplications() {
+        const data = await this.fetchData(this.appsUrl);
+        if (!data) return;
+
+        this.updateDockerContainers(data.docker);
+        this.updatePM2Processes(data.pm2);
+        this.updateNodeProcesses(data.node);
+
+        this.updateCurrentSummary();
+    }
+
+    updateCurrentSummary() {
+        const activeTab = document.querySelector('.tab.active');
+        if (!activeTab) return;
+
+        const type = activeTab.dataset.tab;
+        const summaryEl = document.getElementById('current-cpu');
+        const memEl = document.getElementById('current-mem');
+
+        if (type === 'docker') {
+            const cpu = document.getElementById('docker-count').parentElement.querySelector('[data-cpu]');
+            // Summary will be updated when data is fetched
+        }
+    }
+
+    updateDockerContainers(docker) {
+        document.getElementById('docker-count').textContent = docker.total;
+
+        const summaryValue = document.querySelector('#current-cpu .summary-value');
+        const memSummary = document.querySelector('#current-mem .summary-value');
+
+        if (document.querySelector('.tab.active').dataset.tab === 'docker') {
+            summaryValue.textContent = `${docker.totalCPU}%`;
+            memSummary.textContent = `${docker.totalMemory}%`;
+        }
+
+        const list = document.getElementById('docker-list');
+        if (docker.containers.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <span class="empty-icon">🐳</span>
+                    <p>No Docker containers running</p>
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = docker.containers.map(container => `
+            <div class="app-card">
+                <div class="app-card-header">
+                    <div class="app-name">
+                        <span>🐳</span>
+                        <span>${container.name}</span>
+                    </div>
+                    <span class="app-id">${container.id}</span>
+                </div>
+                <div class="app-stats">
+                    <span class="app-stat">CPU: <strong>${container.cpu}%</strong></span>
+                    <span class="app-stat">Memory: <strong>${container.memory.used}</strong></span>
+                    <span class="app-stat">PIDs: <strong>${container.pids}</strong></span>
+                </div>
+                <div class="app-details">
+                    <span>Network: ${container.network}</span>
+                    <span>Block I/O: ${container.blockIO}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    updatePM2Processes(pm2) {
+        document.getElementById('pm2-count').textContent = pm2.total;
+
+        if (document.querySelector('.tab.active').dataset.tab === 'pm2') {
+            document.querySelector('#current-cpu .summary-value').textContent = `${pm2.totalCPU}%`;
+            document.querySelector('#current-mem .summary-value').textContent = `${pm2.totalMemory} MB`;
+        }
+
+        const list = document.getElementById('pm2-list');
+        if (pm2.processes.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <span class="empty-icon">⚡</span>
+                    <p>No PM2 processes running</p>
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = pm2.processes.map(proc => {
+            const uptimeHours = Math.floor(proc.uptime / 1000 / 60 / 60);
+            const uptimeMinutes = Math.floor((proc.uptime / 1000 / 60) % 60);
+            const statusClass = proc.status === 'online' ? 'status-online' : 'status-offline';
+
+            return `
+                <div class="app-card">
+                    <div class="app-card-header">
+                        <div class="app-name">
+                            <span>⚡</span>
+                            <span>${proc.name}</span>
+                        </div>
+                        <span class="app-status ${statusClass}">${proc.status}</span>
+                    </div>
+                    <div class="app-stats">
+                        <span class="app-stat">CPU: <strong>${proc.cpu}%</strong></span>
+                        <span class="app-stat">Memory: <strong>${proc.memory} MB</strong></span>
+                        <span class="app-stat">PID: <strong>${proc.pid}</strong></span>
+                    </div>
+                    <div class="app-details">
+                        <span>Uptime: ${uptimeHours}h ${uptimeMinutes}m</span>
+                        <span>Restarts: ${proc.restarts}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    updateNodeProcesses(node) {
+        document.getElementById('node-count').textContent = node.total;
+
+        if (document.querySelector('.tab.active').dataset.tab === 'node') {
+            document.querySelector('#current-cpu .summary-value').textContent = `${node.totalCPU}%`;
+            document.querySelector('#current-mem .summary-value').textContent = `${node.totalMemory} MB`;
+        }
+
+        const list = document.getElementById('node-list');
+        if (node.processes.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <span class="empty-icon">📦</span>
+                    <p>No Node.js processes running</p>
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = node.processes.map(proc => `
+            <div class="app-card">
+                <div class="app-card-header">
+                    <div class="app-name">
+                        <span>📦</span>
+                        <span>${proc.name}</span>
+                    </div>
+                    <span class="app-id">PID: ${proc.pid}</span>
+                </div>
+                <div class="app-stats">
+                    <span class="app-stat">CPU: <strong>${proc.cpu}%</strong></span>
+                    <span class="app-stat">Memory: <strong>${proc.memory} MB</strong></span>
+                </div>
+                <div class="app-details">
+                    <span class="command-text">${proc.command || '--'}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async updateDetailedStats() {
+        const data = await this.fetchData(this.statsUrl);
+        if (!data) return;
+
+        const detailsGrid = document.getElementById('details-grid');
+        if (!detailsGrid) return;
+
+        const details = [
+            { label: 'CPU Brand', value: data.cpu.brand || 'Unknown' },
+            { label: 'CPU Cores', value: `${data.cpu.physicalCores || 0} / ${data.cpu.cores || 0}` },
+            { label: 'CPU Speed', value: `${data.cpu.speed || 0} GHz` },
+            { label: 'Memory Available', value: `${data.memory.available || 0} GB` },
+            { label: 'Swap Total', value: `${data.memory.swapTotal || 0} GB` },
+            { label: 'Swap Used', value: `${data.memory.swapUsed || 0} GB` },
+        ];
+
+        if (data.network) {
+            details.push(
+                { label: 'Network Interface', value: data.network.interface },
+                { label: 'Network Received', value: `${data.network.received} MB` },
+                { label: 'Network Sent', value: `${data.network.sent} MB` }
+            );
+        }
+
+        if (data.processes) {
+            details.push(
+                { label: 'Total Processes', value: data.processes.total },
+                { label: 'Running', value: data.processes.running },
+                { label: 'Sleeping', value: data.processes.sleeping }
+            );
+        }
+
+        detailsGrid.innerHTML = details.map(d => `
+            <div class="detail-card">
+                <span class="label">${d.label}</span>
+                <span class="value">${d.value}</span>
+            </div>
+        `).join('');
+    }
+
+    startAutoUpdate() {
+        this.intervalId = setInterval(() => {
+            this.updateHealthData();
+            this.updateApplications();
+        }, this.updateInterval);
+
+        setInterval(() => {
+            this.updateDetailedStats();
+        }, this.updateInterval * 2);
+    }
+
+    stopAutoUpdate() {
+        if (this.intervalId) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new HealthDashboard();
+});

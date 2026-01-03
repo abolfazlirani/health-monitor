@@ -173,7 +173,7 @@ class TelegramService {
     return await this.sendMessage(message);
   }
 
-  startScheduledReports(getSystemHealth, thresholds) {
+  startScheduledReports(getSystemHealth, thresholds, database = null) {
     if (!this.enabled) return;
 
     // Check every 15 minutes
@@ -183,25 +183,47 @@ class TelegramService {
       try {
         const data = await getSystemHealth();
 
-        // Check CPU
-        if (data.cpu.usage > thresholds.cpu) {
-          await this.sendAlert('cpu', data.cpu.usage, thresholds.cpu, {
-            cores: data.cpu.cores,
-            topProcesses: data.cpu.topProcesses || []
-          });
+        // If database is available, use 5-minute average for smarter alerts
+        if (database) {
+          try {
+            const cpuAvg = await database.getAverageCPU(5);
+            const memAvg = await database.getAverageMemory(5);
+
+            // Only alert if we have enough samples (at least 3 minutes of data)
+            if (cpuAvg.sampleCount >= 3) {
+              // Check CPU average
+              if (cpuAvg.average > thresholds.cpu) {
+                await this.sendAlert('cpu', cpuAvg.average, thresholds.cpu, {
+                  cores: data.cpu.cores,
+                  topProcesses: data.cpu.topProcesses || [],
+                  note: `5-min average (${cpuAvg.sampleCount} samples)`
+                });
+              }
+
+              // Check Memory average
+              if (memAvg > thresholds.memory) {
+                await this.sendAlert('memory', memAvg, thresholds.memory, {
+                  total: data.memory.total,
+                  used: data.memory.used,
+                  free: data.memory.free,
+                  topProcesses: data.memory.topProcesses || [],
+                  note: `5-min average`
+                });
+              }
+            } else {
+              console.log(`⏳ Waiting for more data (${cpuAvg.sampleCount}/3 samples)`);
+            }
+          } catch (dbError) {
+            console.error('Database query error, falling back to instant check:', dbError);
+            // Fallback to instant check if database fails
+            this.performInstantCheck(data, thresholds);
+          }
+        } else {
+          // No database, use instant readings
+          this.performInstantCheck(data, thresholds);
         }
 
-        // Check Memory
-        if (data.memory.usage > thresholds.memory) {
-          await this.sendAlert('memory', data.memory.usage, thresholds.memory, {
-            total: data.memory.total,
-            used: data.memory.used,
-            free: data.memory.free,
-            topProcesses: data.memory.topProcesses || []
-          });
-        }
-
-        // Check Disk
+        // Always check disk (doesn't need averaging)
         if (data.disk.usage > thresholds.disk) {
           await this.sendAlert('disk', data.disk.usage, thresholds.disk, {
             total: data.disk.total,
@@ -215,6 +237,26 @@ class TelegramService {
     }, interval);
 
     console.log(`✅ Scheduled checks every 15 minutes`);
+  }
+
+  async performInstantCheck(data, thresholds) {
+    // Check CPU
+    if (data.cpu.usage > thresholds.cpu) {
+      await this.sendAlert('cpu', data.cpu.usage, thresholds.cpu, {
+        cores: data.cpu.cores,
+        topProcesses: data.cpu.topProcesses || []
+      });
+    }
+
+    // Check Memory
+    if (data.memory.usage > thresholds.memory) {
+      await this.sendAlert('memory', data.memory.usage, thresholds.memory, {
+        total: data.memory.total,
+        used: data.memory.used,
+        free: data.memory.free,
+        topProcesses: data.memory.topProcesses || []
+      });
+    }
   }
 
   stopScheduledReports() {

@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const systemMonitor = require('./src/monitor');
 const telegramService = require('./src/telegram');
+const database = require('./src/database');
 require('dotenv').config();
 
 const app = express();
@@ -179,9 +180,38 @@ app.get('/', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Health Monitor Dashboard running on http://localhost:${PORT}`);
   console.log(`📊 Monitoring system resources...`);
+
+  // Initialize Database
+  try {
+    await database.init();
+    console.log('✅ Database initialized');
+
+    // Start collecting metrics every minute
+    setInterval(async () => {
+      try {
+        const health = await systemMonitor.getSystemHealth();
+        await database.saveMetrics(health);
+        console.log('📝 Metrics saved to database');
+      } catch (error) {
+        console.error('❌ Error saving metrics:', error);
+      }
+    }, 60000); // Every 1 minute
+
+    // Cleanup old data daily
+    setInterval(async () => {
+      try {
+        await database.cleanup(7); // Keep 7 days
+      } catch (error) {
+        console.error('❌ Error cleaning up database:', error);
+      }
+    }, 86400000); // Every 24 hours
+
+  } catch (error) {
+    console.error('❌ Database initialization failed:', error);
+  }
 
   // Initialize Telegram service
   if (telegramService.initialize()) {
@@ -196,7 +226,8 @@ app.listen(PORT, () => {
 
     telegramService.startScheduledReports(
       () => systemMonitor.getSystemHealth(),
-      thresholds
+      thresholds,
+      database // Pass database for smart alerting
     );
   }
 

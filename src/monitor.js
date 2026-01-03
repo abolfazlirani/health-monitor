@@ -14,8 +14,27 @@ class SystemMonitor {
     try {
       const processes = await si.processes();
 
+      // Filter out monitoring processes to avoid false positives
+      const monitoringProcesses = ['ps', 'top', 'htop', 'systeminformation'];
+      const filtered = processes.list.filter(p => {
+        const name = (p.name || '').toLowerCase();
+        const command = (p.command || '').toLowerCase();
+
+        // Skip monitoring tools
+        if (monitoringProcesses.some(mp => name.includes(mp))) {
+          return false;
+        }
+
+        // Skip if it's our own monitoring script
+        if (command.includes('health-monitor') || command.includes('server.js')) {
+          return false;
+        }
+
+        return true;
+      });
+
       // Sort by CPU or memory
-      const sorted = processes.list.sort((a, b) => {
+      const sorted = filtered.sort((a, b) => {
         if (sortBy === 'cpu') {
           return (b.cpu || 0) - (a.cpu || 0);
         } else {

@@ -1,238 +1,132 @@
-# Health Monitor Dashboard
+# Health Monitor - راهنمای نصب و استفاده
 
-A beautiful, modern system health monitoring dashboard with Telegram alerts. Built with Node.js, featuring a dark teal glassmorphism design.
+## نصب با Docker Compose (توصیه می‌شود)
 
-## Features
-
-- 📊 Real-time system monitoring (CPU, Memory, Disk)
-- 📱 Telegram alerts when resource usage exceeds thresholds
-- 🎨 Beautiful glassmorphism UI with dark teal/turquoise theme
-- 📈 Live updating dashboard
-- 🖥️ Detailed system information
-- 🚀 Easy to install and configure
-
-## Screenshots
-
-The dashboard features:
-- Glassmorphism card design with blur effects
-- Smooth animations and transitions
-- Real-time progress bars
-- Responsive layout
-
-## Prerequisites
-
-- Node.js 14.x or higher
-- npm or yarn
-- Linux server (for deployment)
-- Telegram Bot Token (optional, for alerts)
-
-## Installation
-
-### 1. Clone or download this repository
+### 1. نصب sqlite3 در سیستم لوکال
 
 ```bash
-cd health-check
+npm install sqlite3
 ```
 
-### 2. Install dependencies
+### 2. آپلود فایل‌ها به سرور
 
 ```bash
-npm install
+scp -r ./* root@linux-laptop.ir:/opt/health-monitor/
 ```
 
-### 3. Configure environment variables
-
-Copy the example environment file:
+### 3. ایجاد فایل .env
 
 ```bash
-cp .env.example .env
+cd /opt/health-monitor
+nano .env
 ```
 
-Edit `.env` and configure:
-
-```env
-PORT=3000
-HOSTNAME=server
-
-# Monitoring intervals (milliseconds)
+محتوای .env:
+```
+PORT=1641
 MONITOR_INTERVAL=5000
-
-# Alert thresholds (percentage)
 CPU_THRESHOLD=80
 MEMORY_THRESHOLD=80
 DISK_THRESHOLD=80
-
-# Telegram Configuration (optional)
-TELEGRAM_BOT_TOKEN=your_bot_token_here
-TELEGRAM_CHAT_ID=your_chat_id_here
+TELEGRAM_BOT_TOKEN=8510543120:AAHvuoS6tMEloGwyfbYZeg4AA-OFHj7Vw5Y
+TELEGRAM_CHAT_ID=893663453
+TELEGRAM_PROXY_URL=https://asarmulticenter.ir/canBot/health-chech.php
+AUTH_USER=1641
+AUTH_PASS=1641
 ```
 
-### 4. Set up Telegram Bot (Optional)
+### 4. اجرا با Docker Compose
 
-1. Open Telegram and search for [@BotFather](https://t.me/BotFather)
-2. Send `/newbot` and follow instructions to create a bot
-3. Copy the bot token
-4. Send a message to your bot
-5. Get your chat ID by visiting:
+```bash
+docker-compose up -d
+```
+
+### 5. مشاهده لاگ‌ها
+
+```bash
+docker-compose logs -f
+```
+
+---
+
+## تغییرات جدید
+
+### ✅ دیتابیس SQLite
+- ذخیره متریک‌ها هر 1 دقیقه
+- محاسبه میانگین 5 دقیقه برای CPU و Memory
+- نگهداری 7 روز داده
+
+### ✅ الارم هوشمند
+- **قبل:** الارم اگر CPU > 80% در لحظه
+- **بعد:** الارم اگر میانگین 5 دقیقه CPU > 80%
+- فیلتر کردن پروسه‌های مانیتورینگ (`ps`, `top`, `htop`)
+
+### ✅ جلوگیری از False Positive
+- پروسه `ps` دیگه باعث الارم نمی‌شه
+- فقط مشکلات واقعی و مداوم رو گزارش می‌ده
+
+---
+
+## دستورات مفید
+
+### مشاهده دیتابیس
+```bash
+sqlite3 /opt/health-monitor/data/health-monitor.db
+SELECT * FROM metrics ORDER BY timestamp DESC LIMIT 10;
+.exit
+```
+
+### Restart سرویس
+```bash
+docker-compose restart
+```
+
+### Stop سرویس
+```bash
+docker-compose down
+```
+
+### پاک کردن دیتابیس
+```bash
+rm /opt/health-monitor/data/health-monitor.db
+docker-compose restart
+```
+
+---
+
+## نکات مهم
+
+1. **دایرکتوری data** باید قابل نوشتن باشه:
+   ```bash
+   mkdir -p /opt/health-monitor/data
+   chmod 777 /opt/health-monitor/data
    ```
-   https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
+
+2. **اولین 5 دقیقه** الارمی ارسال نمی‌شه (در حال جمع‌آوری داده)
+
+3. **پورت 1641** باید باز باشه:
+   ```bash
+   ufw allow 1641/tcp
+   ufw reload
    ```
-6. Look for `"chat":{"id":123456789}` in the response
 
-### 5. Run the application
+---
 
-#### Development mode:
-```bash
-npm run dev
+## مثال پیام تلگرام جدید
+
+```
+🔥 CPU Alert!
+
+⚠️ CPU usage is 85.3%
+📊 Threshold: 80%
+⏰ Time: ۱۴۰۴/۱۰/۱۳, ۱۴:۳۰:۰۰
+📝 5-min average (5 samples)
+
+👤 Top Processes:
+1. postgres (70)
+   CPU: 71.1% | MEM: 0.3%
+2. node (root)
+   CPU: 12.5% | MEM: 1.1%
 ```
 
-#### Production mode:
-```bash
-npm start
-```
-
-The dashboard will be available at `http://localhost:3000`
-
-## Linux Server Deployment
-
-### Using PM2 (Recommended)
-
-1. Install PM2 globally:
-```bash
-npm install -g pm2
-```
-
-2. Start the application:
-```bash
-pm2 start server.js --name health-monitor
-```
-
-3. Save PM2 configuration:
-```bash
-pm2 save
-pm2 startup
-```
-
-4. Access logs:
-```bash
-pm2 logs health-monitor
-```
-
-### Using systemd Service
-
-1. Create a systemd service file:
-
-```bash
-sudo nano /etc/systemd/system/health-monitor.service
-```
-
-2. Add the following content (adjust paths):
-
-```ini
-[Unit]
-Description=Health Monitor Dashboard
-After=network.target
-
-[Service]
-Type=simple
-User=your-username
-WorkingDirectory=/path/to/health-check
-Environment=NODE_ENV=production
-ExecStart=/usr/bin/node server.js
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-3. Enable and start the service:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable health-monitor
-sudo systemctl start health-monitor
-sudo systemctl status health-monitor
-```
-
-### Using Nginx Reverse Proxy (Optional)
-
-If you want to access the dashboard via a domain:
-
-1. Install Nginx:
-```bash
-sudo apt install nginx
-```
-
-2. Create a configuration file:
-```bash
-sudo nano /etc/nginx/sites-available/health-monitor
-```
-
-3. Add:
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-4. Enable the site:
-```bash
-sudo ln -s /etc/nginx/sites-available/health-monitor /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
-
-## Configuration
-
-### Monitoring Intervals
-
-- `MONITOR_INTERVAL`: How often to check system resources (default: 5000ms = 5 seconds)
-
-### Alert Thresholds
-
-Set thresholds as percentages:
-- `CPU_THRESHOLD`: CPU usage percentage to trigger alert (default: 80%)
-- `MEMORY_THRESHOLD`: Memory usage percentage to trigger alert (default: 80%)
-- `DISK_THRESHOLD`: Disk usage percentage to trigger alert (default: 80%)
-
-### Telegram Alerts
-
-Alerts are sent when resource usage **increases** and exceeds the threshold. There's a 1-minute cooldown between alerts for the same resource type to prevent spam.
-
-## API Endpoints
-
-- `GET /api/health` - Get current system health metrics
-- `GET /api/stats` - Get detailed system statistics
-
-## Troubleshooting
-
-### Port already in use
-Change the `PORT` in `.env` file
-
-### Telegram alerts not working
-1. Verify `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are correct
-2. Make sure you've sent a message to your bot
-3. Check server logs for error messages
-
-### Permission errors on Linux
-Make sure the user running the application has necessary permissions to read system information (usually requires no special permissions)
-
-## License
-
-MIT
-
-## Support
-
-For issues or questions, please check the logs or create an issue in the repository.
-
+توجه: دیگه `ps` و `systeminformation` در لیست نیستن! ✅

@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  health-monitor:
+    build: .
+    container_name: health-monitor
+    restart: unless-stopped
+    ports:
+      - "1641:1641"
+    volumes:
+      - ./data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    environment:
+      - PORT=1641
+      - MONITOR_INTERVAL=5000
+      - CPU_THRESHOLD=80
+      - MEMORY_THRESHOLD=80
+      - DISK_THRESHOLD=80
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - TELEGRAM_PROXY_URL=${TELEGRAM_PROXY_URL}
+      - AUTH_USER=${AUTH_USER}
+      - AUTH_PASS=${AUTH_PASS}
+    privileged: true
+    network_mode: host

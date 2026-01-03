@@ -32,16 +32,16 @@ AUTH_PASS=1641
 $envContent | Out-File -FilePath ".env.deploy" -Encoding UTF8 -NoNewline
 Write-Host "[OK] .env file prepared" -ForegroundColor Green
 
-# Create remote directory
-Write-Host "Creating remote directory..." -ForegroundColor Yellow
-ssh ${SERVER_USER}@${SERVER_HOST} "mkdir -p $REMOTE_PATH"
+# Create remote directory and data folder
+Write-Host "Creating remote directories..." -ForegroundColor Yellow
+ssh ${SERVER_USER}@${SERVER_HOST} "mkdir -p $REMOTE_PATH/data && chmod 777 $REMOTE_PATH/data"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[ERROR] Failed to create remote directory" -ForegroundColor Red
     Remove-Item ".env.deploy" -ErrorAction SilentlyContinue
     exit 1
 }
-Write-Host "[OK] Remote directory ready" -ForegroundColor Green
+Write-Host "[OK] Remote directories ready" -ForegroundColor Green
 
 # Upload files using scp
 Write-Host "Uploading files..." -ForegroundColor Yellow
@@ -77,6 +77,9 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "=========================================" -ForegroundColor Green
     Write-Host "Deployment completed successfully!" -ForegroundColor Green
     Write-Host "Dashboard: http://${SERVER_HOST}:1641" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Database: $REMOTE_PATH/data/health-monitor.db" -ForegroundColor Yellow
+    Write-Host "Wait 5 minutes for data collection before alerts" -ForegroundColor Yellow
     Write-Host "=========================================" -ForegroundColor Green
 } else {
     Write-Host "[ERROR] Deployment failed" -ForegroundColor Red

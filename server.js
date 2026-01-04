@@ -73,6 +73,34 @@ app.get('/api/applications', async (req, res) => {
   }
 });
 
+// Historical Metrics Endpoints
+app.get('/api/metrics/hourly', async (req, res) => {
+  try {
+    const metrics = await database.getHourlyMetrics();
+    res.json(metrics);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/metrics/daily', async (req, res) => {
+  try {
+    const metrics = await database.getDailyMetrics();
+    res.json(metrics);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/metrics/weekly', async (req, res) => {
+  try {
+    const metrics = await database.getWeeklyMetrics();
+    res.json(metrics);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== PROCESS MANAGEMENT ====================
 
 app.post('/api/process/kill', async (req, res) => {

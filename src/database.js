@@ -189,6 +189,90 @@ class Database {
     });
   }
 
+  async getHourlyMetrics() {
+    const sql = `
+      SELECT 
+        strftime('%Y-%m-%d %H:00:00', timestamp) as time_period,
+        AVG(cpu_usage) as avg_cpu,
+        MAX(cpu_usage) as max_cpu,
+        MIN(cpu_usage) as min_cpu,
+        AVG(memory_usage) as avg_memory,
+        MAX(memory_usage) as max_memory,
+        MIN(memory_usage) as min_memory
+      FROM metrics 
+      WHERE timestamp >= datetime('now', '-24 hours')
+      GROUP BY strftime('%Y-%m-%d %H', timestamp)
+      ORDER BY time_period ASC
+    `;
+
+    return new Promise((resolve, reject) => {
+      this.db.all(sql, [], (err, rows) => {
+        if (err) {
+          console.error('❌ Error fetching hourly metrics:', err);
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+
+  async getDailyMetrics() {
+    const sql = `
+      SELECT 
+        strftime('%Y-%m-%d', timestamp) as time_period,
+        AVG(cpu_usage) as avg_cpu,
+        MAX(cpu_usage) as max_cpu,
+        MIN(cpu_usage) as min_cpu,
+        AVG(memory_usage) as avg_memory,
+        MAX(memory_usage) as max_memory,
+        MIN(memory_usage) as min_memory
+      FROM metrics 
+      WHERE timestamp >= datetime('now', '-7 days')
+      GROUP BY strftime('%Y-%m-%d', timestamp)
+      ORDER BY time_period ASC
+    `;
+
+    return new Promise((resolve, reject) => {
+      this.db.all(sql, [], (err, rows) => {
+        if (err) {
+          console.error('❌ Error fetching daily metrics:', err);
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+
+  async getWeeklyMetrics() {
+    const sql = `
+      SELECT 
+        strftime('%Y-W%W', timestamp) as time_period,
+        AVG(cpu_usage) as avg_cpu,
+        MAX(cpu_usage) as max_cpu,
+        MIN(cpu_usage) as min_cpu,
+        AVG(memory_usage) as avg_memory,
+        MAX(memory_usage) as max_memory,
+        MIN(memory_usage) as min_memory
+      FROM metrics 
+      WHERE timestamp >= datetime('now', '-28 days')
+      GROUP BY strftime('%Y-%W', timestamp)
+      ORDER BY time_period ASC
+    `;
+
+    return new Promise((resolve, reject) => {
+      this.db.all(sql, [], (err, rows) => {
+        if (err) {
+          console.error('❌ Error fetching weekly metrics:', err);
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+
   async close() {
     return new Promise((resolve, reject) => {
       if (this.db) {

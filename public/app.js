@@ -10,6 +10,7 @@ class HealthDashboard {
 
     init() {
         this.injectSVGGradient();
+        this.setupSidebar();
         this.updateHealthData();
         this.updateApplications();
         this.updateDetailedStats();
@@ -33,6 +34,82 @@ class HealthDashboard {
             </defs>
         `;
         document.body.insertBefore(svg, document.body.firstChild);
+    }
+
+    setupSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const mobileToggle = document.getElementById('mobile-menu-toggle');
+        const navItems = document.querySelectorAll('.nav-item');
+
+        // Mobile menu toggle
+        if (mobileToggle) {
+            mobileToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                mobileToggle.classList.toggle('active');
+            });
+        }
+
+        // Smooth scroll navigation
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = item.getAttribute('href').substring(1);
+                const targetSection = document.getElementById(targetId);
+
+                if (targetSection) {
+                    // Smooth scroll to section
+                    targetSection.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+
+                    // Update active state
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    item.classList.add('active');
+
+                    // Close mobile menu
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.remove('active');
+                        mobileToggle.classList.remove('active');
+                    }
+                }
+            });
+        });
+
+        // Active section detection on scroll
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                this.updateActiveSection();
+            }, 100);
+        });
+
+        // Initial active section
+        this.updateActiveSection();
+    }
+
+    updateActiveSection() {
+        const sections = document.querySelectorAll('section[id]');
+        const navItems = document.querySelectorAll('.nav-item');
+        let currentSection = '';
+
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            const sectionHeight = section.clientHeight;
+            const scrollPosition = window.scrollY + 200; // Offset for better detection
+
+            if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+                currentSection = section.getAttribute('id');
+            }
+        });
+
+        navItems.forEach(item => {
+            item.classList.remove('active');
+            if (item.getAttribute('data-section') === currentSection) {
+                item.classList.add('active');
+            }
+        });
     }
 
     setupTabs() {
@@ -533,7 +610,247 @@ class HealthDashboard {
             alert('Error: ' + error.message);
         }
     }
+
+    // ==================== CHARTS ====================
+
+    initCharts() {
+        this.currentPeriod = 'hourly';
+        this.cpuChart = null;
+        this.memoryChart = null;
+
+        // Setup period selector buttons
+        const periodButtons = document.querySelectorAll('.period-btn');
+        periodButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                periodButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentPeriod = btn.dataset.period;
+                this.updateCharts();
+            });
+        });
+
+        // Initialize charts
+        this.createCharts();
+        this.updateCharts();
+
+        // Auto-refresh charts every 2 minutes
+        setInterval(() => {
+            this.updateCharts();
+        }, 120000);
+    }
+
+    createCharts() {
+        const cpuCtx = document.getElementById('cpu-chart');
+        const memoryCtx = document.getElementById('memory-chart');
+
+        if (!cpuCtx || !memoryCtx) return;
+
+        // Common chart options
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#b8c5d6',
+                        font: {
+                            family: 'Inter',
+                            size: 11
+                        },
+                        usePointStyle: true,
+                        padding: 15
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(13, 21, 38, 0.95)',
+                    titleColor: '#00ced1',
+                    bodyColor: '#b8c5d6',
+                    borderColor: 'rgba(0, 206, 209, 0.3)',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: true,
+                    callbacks: {
+                        label: function (context) {
+                            return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + '%';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: 'rgba(0, 206, 209, 0.08)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#6b7a8f',
+                        font: {
+                            family: 'Inter',
+                            size: 10
+                        },
+                        maxRotation: 45,
+                        minRotation: 0
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: {
+                        color: 'rgba(0, 206, 209, 0.08)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#6b7a8f',
+                        font: {
+                            family: 'Inter',
+                            size: 10
+                        },
+                        callback: function (value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        };
+
+        // CPU Chart
+        this.cpuChart = new Chart(cpuCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Average CPU',
+                    data: [],
+                    borderColor: '#00ced1',
+                    backgroundColor: 'rgba(0, 206, 209, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#00ced1',
+                    pointBorderColor: '#0a0f1a',
+                    pointBorderWidth: 2
+                }, {
+                    label: 'Max CPU',
+                    data: [],
+                    borderColor: '#ff4757',
+                    backgroundColor: 'rgba(255, 71, 87, 0.05)',
+                    borderWidth: 1.5,
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                    pointBackgroundColor: '#ff4757'
+                }]
+            },
+            options: commonOptions
+        });
+
+        // Memory Chart
+        this.memoryChart = new Chart(memoryCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Average Memory',
+                    data: [],
+                    borderColor: '#7fffd4',
+                    backgroundColor: 'rgba(127, 255, 212, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#7fffd4',
+                    pointBorderColor: '#0a0f1a',
+                    pointBorderWidth: 2
+                }, {
+                    label: 'Max Memory',
+                    data: [],
+                    borderColor: '#ffaa00',
+                    backgroundColor: 'rgba(255, 170, 0, 0.05)',
+                    borderWidth: 1.5,
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                    pointBackgroundColor: '#ffaa00'
+                }]
+            },
+            options: commonOptions
+        });
+    }
+
+    async updateCharts() {
+        try {
+            const endpoint = `/api/metrics/${this.currentPeriod}`;
+            const data = await this.fetchData(endpoint);
+
+            if (!data || data.length === 0) {
+                console.log('No chart data available');
+                return;
+            }
+
+            // Format labels based on period
+            const labels = data.map(item => this.formatChartLabel(item.time_period));
+            const avgCpu = data.map(item => parseFloat(item.avg_cpu).toFixed(1));
+            const maxCpu = data.map(item => parseFloat(item.max_cpu).toFixed(1));
+            const avgMemory = data.map(item => parseFloat(item.avg_memory).toFixed(1));
+            const maxMemory = data.map(item => parseFloat(item.max_memory).toFixed(1));
+
+            // Update CPU Chart
+            if (this.cpuChart) {
+                this.cpuChart.data.labels = labels;
+                this.cpuChart.data.datasets[0].data = avgCpu;
+                this.cpuChart.data.datasets[1].data = maxCpu;
+                this.cpuChart.update('none');
+            }
+
+            // Update Memory Chart
+            if (this.memoryChart) {
+                this.memoryChart.data.labels = labels;
+                this.memoryChart.data.datasets[0].data = avgMemory;
+                this.memoryChart.data.datasets[1].data = maxMemory;
+                this.memoryChart.update('none');
+            }
+        } catch (error) {
+            console.error('Error updating charts:', error);
+        }
+    }
+
+    formatChartLabel(timeStr) {
+        if (this.currentPeriod === 'hourly') {
+            // Format: "2026-01-04 10:00:00" -> "10:00"
+            const parts = timeStr.split(' ');
+            if (parts.length > 1) {
+                return parts[1].substring(0, 5);
+            }
+            return timeStr;
+        } else if (this.currentPeriod === 'daily') {
+            // Format: "2026-01-04" -> "Jan 4"
+            const date = new Date(timeStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        } else if (this.currentPeriod === 'weekly') {
+            // Format: "2026-W01" -> "Week 1"
+            const weekNum = timeStr.split('-W')[1];
+            return `Week ${weekNum}`;
+        }
+        return timeStr;
+    }
 }
 
 const dashboard = new HealthDashboard();
 
+// Initialize charts after page load
+window.addEventListener('load', () => {
+    dashboard.initCharts();
+});

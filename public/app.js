@@ -275,7 +275,7 @@ class HealthDashboard {
                     <span class="app-id">${container.id}</span>
                 </div>
                 <div class="app-stats">
-                    <span class="app-stat">CPU: <strong>${container.cpu}%</strong></span>
+                    <span class="app-stat">CPU: <strong>${parseFloat(container.cpu).toFixed(2)}%</strong></span>
                     <span class="app-stat">Memory: <strong>${container.memory.used}</strong></span>
                     <span class="app-stat">PIDs: <strong>${container.pids}</strong></span>
                 </div>
@@ -326,7 +326,7 @@ class HealthDashboard {
                         <span class="app-status ${statusClass}">${proc.status}</span>
                     </div>
                     <div class="app-stats">
-                        <span class="app-stat">CPU: <strong>${proc.cpu}%</strong></span>
+                        <span class="app-stat">CPU: <strong>${parseFloat(proc.cpu).toFixed(2)}%</strong></span>
                         <span class="app-stat">Memory: <strong>${proc.memory} MB</strong></span>
                         <span class="app-stat">PID: <strong>${proc.pid}</strong></span>
                     </div>
@@ -373,7 +373,7 @@ class HealthDashboard {
                     <span class="app-id">PID: ${proc.pid}</span>
                 </div>
                 <div class="app-stats">
-                    <span class="app-stat">CPU: <strong>${proc.cpu}%</strong></span>
+                    <span class="app-stat">CPU: <strong>${parseFloat(proc.cpu).toFixed(2)}%</strong></span>
                     <span class="app-stat">Memory: <strong>${proc.memory} MB</strong></span>
                 </div>
                 <div class="app-details">

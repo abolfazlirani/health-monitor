@@ -7,7 +7,7 @@ const database = require('./src/database');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3500;
 
 // Authentication credentials from environment
 const AUTH_USER = process.env.AUTH_USER || 'admin';

@@ -5,19 +5,117 @@ class HealthDashboard {
         this.appsUrl = '/api/applications';
         this.updateInterval = 5000;
         this.intervalId = null;
+        this.currentPage = 'dashboard';
         this.init();
     }
 
     init() {
         this.injectSVGGradient();
+        this.setupNavigation();
+        this.setupTabs();
+        this.setupEventListeners();
+        this.setupMobileMenu();
+
+        // Initial data load
         this.updateHealthData();
         this.updateApplications();
         this.updateDetailedStats();
         this.updateBackups();
+
         this.startAutoUpdate();
-        this.setupEventListeners();
-        this.setupTabs();
+
+        // Handle initial hash
+        this.handleHashChange();
     }
+
+    // ==================== NAVIGATION ====================
+
+    setupNavigation() {
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = item.dataset.page;
+                this.navigateTo(page);
+            });
+        });
+
+        // Listen for hash changes
+        window.addEventListener('hashchange', () => this.handleHashChange());
+    }
+
+    handleHashChange() {
+        const hash = window.location.hash.slice(1) || 'dashboard';
+        this.navigateTo(hash, false);
+    }
+
+    navigateTo(page, updateHash = true) {
+        // Update hash
+        if (updateHash) {
+            window.location.hash = page;
+        }
+
+        // Update navigation active state
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.page === page);
+        });
+
+        // Show/hide pages
+        document.querySelectorAll('.page').forEach(p => {
+            p.classList.toggle('active', p.id === `page-${page}`);
+        });
+
+        this.currentPage = page;
+
+        // Load page-specific data
+        this.loadPageData(page);
+
+        // Close mobile menu if open
+        document.querySelector('.sidebar')?.classList.remove('open');
+    }
+
+    loadPageData(page) {
+        switch (page) {
+            case 'dashboard':
+                this.updateHealthData();
+                break;
+            case 'applications':
+                this.updateApplications();
+                break;
+            case 'network':
+                this.updateNetworkData();
+                break;
+            case 'backups':
+                this.updateBackups();
+                break;
+            case 'processes':
+                this.updateTopProcesses();
+                break;
+            case 'settings':
+                this.updateDetailedStats();
+                break;
+        }
+    }
+
+    setupMobileMenu() {
+        const menuToggle = document.getElementById('menu-toggle');
+        const sidebar = document.querySelector('.sidebar');
+
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+
+            // Close menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+                    sidebar.classList.remove('open');
+                }
+            });
+        }
+    }
+
+    // ==================== CORE METHODS ====================
 
     injectSVGGradient() {
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -78,11 +176,10 @@ class HealthDashboard {
     updateCircularProgress(id, value) {
         const circle = document.querySelector(`#${id} .progress-ring`);
         if (circle) {
-            const circumference = 283; // 2 * PI * 45
+            const circumference = 283;
             const offset = circumference - (value / 100) * circumference;
             circle.style.strokeDashoffset = offset;
 
-            // Update color based on value
             if (value >= 80) {
                 circle.style.stroke = '#ff4757';
             } else if (value >= 60) {
@@ -93,32 +190,45 @@ class HealthDashboard {
         }
     }
 
+    // ==================== DATA UPDATES ====================
+
     async updateHealthData() {
         const data = await this.fetchData(this.apiUrl);
         if (!data) return;
 
         // Update CPU
-        document.getElementById('cpu-usage').textContent = data.cpu.usage;
+        const cpuUsage = document.getElementById('cpu-usage');
+        if (cpuUsage) cpuUsage.textContent = data.cpu.usage;
         this.updateCircularProgress('cpu-circle', data.cpu.usage);
-        document.getElementById('cpu-cores').textContent = data.cpu.cores;
-        document.getElementById('cpu-model').textContent = (data.cpu.model || 'Unknown').substring(0, 20);
+        const cpuCores = document.getElementById('cpu-cores');
+        if (cpuCores) cpuCores.textContent = data.cpu.cores;
+        const cpuModel = document.getElementById('cpu-model');
+        if (cpuModel) cpuModel.textContent = (data.cpu.model || 'Unknown').substring(0, 20);
 
         // Update Memory
-        document.getElementById('memory-usage').textContent = data.memory.usage;
+        const memUsage = document.getElementById('memory-usage');
+        if (memUsage) memUsage.textContent = data.memory.usage;
         this.updateCircularProgress('memory-circle', data.memory.usage);
-        document.getElementById('memory-used').textContent = `${data.memory.used} GB`;
-        document.getElementById('memory-total').textContent = `${data.memory.total} GB`;
+        const memUsed = document.getElementById('memory-used');
+        if (memUsed) memUsed.textContent = `${data.memory.used} GB`;
+        const memTotal = document.getElementById('memory-total');
+        if (memTotal) memTotal.textContent = `${data.memory.total} GB`;
 
         // Update Disk
-        document.getElementById('disk-usage').textContent = data.disk.usage;
+        const diskUsage = document.getElementById('disk-usage');
+        if (diskUsage) diskUsage.textContent = data.disk.usage;
         this.updateCircularProgress('disk-circle', data.disk.usage);
-        document.getElementById('disk-used').textContent = `${data.disk.used} GB`;
-        document.getElementById('disk-total').textContent = `${data.disk.total} GB`;
+        const diskUsed = document.getElementById('disk-used');
+        if (diskUsed) diskUsed.textContent = `${data.disk.used} GB`;
+        const diskTotal = document.getElementById('disk-total');
+        if (diskTotal) diskTotal.textContent = `${data.disk.total} GB`;
 
         // Update timestamp
         const now = new Date();
-        document.getElementById('last-update').textContent =
-            now.toLocaleTimeString('en-US', { hour12: false });
+        const lastUpdate = document.getElementById('last-update');
+        if (lastUpdate) {
+            lastUpdate.textContent = now.toLocaleTimeString('en-US', { hour12: false });
+        }
     }
 
     async updateApplications() {
@@ -128,36 +238,23 @@ class HealthDashboard {
         this.updateDockerContainers(data.docker);
         this.updatePM2Processes(data.pm2);
         this.updateNodeProcesses(data.node);
-
-        this.updateCurrentSummary();
-    }
-
-    updateCurrentSummary() {
-        const activeTab = document.querySelector('.tab.active');
-        if (!activeTab) return;
-
-        const type = activeTab.dataset.tab;
-        const summaryEl = document.getElementById('current-cpu');
-        const memEl = document.getElementById('current-mem');
-
-        if (type === 'docker') {
-            const cpu = document.getElementById('docker-count').parentElement.querySelector('[data-cpu]');
-            // Summary will be updated when data is fetched
-        }
     }
 
     updateDockerContainers(docker) {
-        document.getElementById('docker-count').textContent = docker.total;
+        const count = document.getElementById('docker-count');
+        if (count) count.textContent = docker.total;
 
         const summaryValue = document.querySelector('#current-cpu .summary-value');
         const memSummary = document.querySelector('#current-mem .summary-value');
 
-        if (document.querySelector('.tab.active').dataset.tab === 'docker') {
-            summaryValue.textContent = `${docker.totalCPU}%`;
-            memSummary.textContent = `${docker.totalMemory}%`;
+        if (document.querySelector('.tab.active')?.dataset.tab === 'docker') {
+            if (summaryValue) summaryValue.textContent = `${docker.totalCPU}%`;
+            if (memSummary) memSummary.textContent = `${docker.totalMemory}%`;
         }
 
         const list = document.getElementById('docker-list');
+        if (!list) return;
+
         if (docker.containers.length === 0) {
             list.innerHTML = `
                 <div class="empty-state">
@@ -191,14 +288,19 @@ class HealthDashboard {
     }
 
     updatePM2Processes(pm2) {
-        document.getElementById('pm2-count').textContent = pm2.total;
+        const count = document.getElementById('pm2-count');
+        if (count) count.textContent = pm2.total;
 
-        if (document.querySelector('.tab.active').dataset.tab === 'pm2') {
-            document.querySelector('#current-cpu .summary-value').textContent = `${pm2.totalCPU}%`;
-            document.querySelector('#current-mem .summary-value').textContent = `${pm2.totalMemory} MB`;
+        if (document.querySelector('.tab.active')?.dataset.tab === 'pm2') {
+            const summaryValue = document.querySelector('#current-cpu .summary-value');
+            const memSummary = document.querySelector('#current-mem .summary-value');
+            if (summaryValue) summaryValue.textContent = `${pm2.totalCPU}%`;
+            if (memSummary) memSummary.textContent = `${pm2.totalMemory} MB`;
         }
 
         const list = document.getElementById('pm2-list');
+        if (!list) return;
+
         if (pm2.processes.length === 0) {
             list.innerHTML = `
                 <div class="empty-state">
@@ -238,14 +340,19 @@ class HealthDashboard {
     }
 
     updateNodeProcesses(node) {
-        document.getElementById('node-count').textContent = node.total;
+        const count = document.getElementById('node-count');
+        if (count) count.textContent = node.total;
 
-        if (document.querySelector('.tab.active').dataset.tab === 'node') {
-            document.querySelector('#current-cpu .summary-value').textContent = `${node.totalCPU}%`;
-            document.querySelector('#current-mem .summary-value').textContent = `${node.totalMemory} MB`;
+        if (document.querySelector('.tab.active')?.dataset.tab === 'node') {
+            const summaryValue = document.querySelector('#current-cpu .summary-value');
+            const memSummary = document.querySelector('#current-mem .summary-value');
+            if (summaryValue) summaryValue.textContent = `${node.totalCPU}%`;
+            if (memSummary) memSummary.textContent = `${node.totalMemory} MB`;
         }
 
         const list = document.getElementById('node-list');
+        if (!list) return;
+
         if (node.processes.length === 0) {
             list.innerHTML = `
                 <div class="empty-state">
@@ -318,19 +425,25 @@ class HealthDashboard {
 
     startAutoUpdate() {
         this.intervalId = setInterval(() => {
-            this.updateHealthData();
-            this.updateApplications();
+            if (this.currentPage === 'dashboard') {
+                this.updateHealthData();
+            }
+            if (this.currentPage === 'applications') {
+                this.updateApplications();
+            }
         }, this.updateInterval);
 
         setInterval(() => {
-            this.updateDetailedStats();
-            this.updateNetworkData();
-            this.updateTopProcesses();
+            if (this.currentPage === 'settings') {
+                this.updateDetailedStats();
+            }
+            if (this.currentPage === 'network') {
+                this.updateNetworkData();
+            }
+            if (this.currentPage === 'processes') {
+                this.updateTopProcesses();
+            }
         }, this.updateInterval * 2);
-
-        // Initial load
-        this.updateNetworkData();
-        this.updateTopProcesses();
     }
 
     stopAutoUpdate() {
@@ -584,4 +697,3 @@ class HealthDashboard {
 }
 
 const dashboard = new HealthDashboard();
-

@@ -20,296 +20,334 @@
         <div class="grid-overlay"></div>
     </div>
 
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
                 <div class="logo">
                     <span class="logo-icon">⚡</span>
                     <h1>Health Monitor</h1>
                 </div>
-                <span class="version-badge">v2.0</span>
+                <span class="version-badge">v3.0</span>
             </div>
-            <div class="header-right">
+
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="nav-item active" data-page="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Dashboard</span>
+                </a>
+                <a href="#applications" class="nav-item" data-page="applications">
+                    <span class="nav-icon">🚀</span>
+                    <span class="nav-label">Applications</span>
+                </a>
+                <a href="#network" class="nav-item" data-page="network">
+                    <span class="nav-icon">🌐</span>
+                    <span class="nav-label">Network</span>
+                </a>
+                <a href="#backups" class="nav-item" data-page="backups">
+                    <span class="nav-icon">💾</span>
+                    <span class="nav-label">Backups</span>
+                </a>
+                <a href="#processes" class="nav-item" data-page="processes">
+                    <span class="nav-icon">🎛️</span>
+                    <span class="nav-label">Processes</span>
+                </a>
+                <a href="#settings" class="nav-item" data-page="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">Settings</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
                 <div class="live-indicator">
                     <span class="pulse-dot"></span>
                     <span>Live</span>
                 </div>
                 <div class="last-update" id="last-update">--:--:--</div>
-                <button class="refresh-btn" id="refresh-btn">
-                    <span class="refresh-icon">↻</span>
-                </button>
+            </div>
+        </aside>
+
+        <!-- Mobile Header -->
+        <header class="mobile-header">
+            <button class="menu-toggle" id="menu-toggle">☰</button>
+            <div class="logo">
+                <span class="logo-icon">⚡</span>
+                <span>Health Monitor</span>
+            </div>
+            <div class="live-indicator">
+                <span class="pulse-dot"></span>
             </div>
         </header>
 
-        <!-- System Stats Grid -->
-        <section class="stats-section">
-            <div class="section-title">
-                <span class="title-icon">📊</span>
-                <h2>System Overview</h2>
-            </div>
-            <div class="stats-grid">
-                <!-- CPU Card -->
-                <div class="stat-card" data-type="cpu">
-                    <div class="card-glow"></div>
-                    <div class="stat-header">
-                        <div class="stat-icon">💻</div>
-                        <span class="stat-label">CPU Usage</span>
-                    </div>
-                    <div class="stat-body">
-                        <div class="circular-progress" id="cpu-circle">
-                            <svg viewBox="0 0 100 100">
-                                <circle class="progress-bg" cx="50" cy="50" r="45"></circle>
-                                <circle class="progress-ring" cx="50" cy="50" r="45"></circle>
-                            </svg>
-                            <div class="progress-value">
-                                <span class="value" id="cpu-usage">0</span>
-                                <span class="unit">%</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="stat-footer">
-                        <div class="stat-detail">
-                            <span class="detail-label">Cores</span>
-                            <span class="detail-value" id="cpu-cores">0</span>
-                        </div>
-                        <div class="stat-detail">
-                            <span class="detail-label">Model</span>
-                            <span class="detail-value truncate" id="cpu-model">--</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Memory Card -->
-                <div class="stat-card" data-type="memory">
-                    <div class="card-glow"></div>
-                    <div class="stat-header">
-                        <div class="stat-icon">🧠</div>
-                        <span class="stat-label">Memory</span>
-                    </div>
-                    <div class="stat-body">
-                        <div class="circular-progress" id="memory-circle">
-                            <svg viewBox="0 0 100 100">
-                                <circle class="progress-bg" cx="50" cy="50" r="45"></circle>
-                                <circle class="progress-ring" cx="50" cy="50" r="45"></circle>
-                            </svg>
-                            <div class="progress-value">
-                                <span class="value" id="memory-usage">0</span>
-                                <span class="unit">%</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="stat-footer">
-                        <div class="stat-detail">
-                            <span class="detail-label">Used</span>
-                            <span class="detail-value" id="memory-used">0 GB</span>
-                        </div>
-                        <div class="stat-detail">
-                            <span class="detail-label">Total</span>
-                            <span class="detail-value" id="memory-total">0 GB</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Disk Card -->
-                <div class="stat-card" data-type="disk">
-                    <div class="card-glow"></div>
-                    <div class="stat-header">
-                        <div class="stat-icon">💾</div>
-                        <span class="stat-label">Disk Space</span>
-                    </div>
-                    <div class="stat-body">
-                        <div class="circular-progress" id="disk-circle">
-                            <svg viewBox="0 0 100 100">
-                                <circle class="progress-bg" cx="50" cy="50" r="45"></circle>
-                                <circle class="progress-ring" cx="50" cy="50" r="45"></circle>
-                            </svg>
-                            <div class="progress-value">
-                                <span class="value" id="disk-usage">0</span>
-                                <span class="unit">%</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="stat-footer">
-                        <div class="stat-detail">
-                            <span class="detail-label">Used</span>
-                            <span class="detail-value" id="disk-used">0 GB</span>
-                        </div>
-                        <div class="stat-detail">
-                            <span class="detail-label">Total</span>
-                            <span class="detail-value" id="disk-total">0 GB</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Applications Section -->
-        <section class="apps-section">
-            <div class="section-title">
-                <span class="title-icon">🚀</span>
-                <h2>Running Applications</h2>
-            </div>
-
-            <div class="tabs-container">
-                <div class="tabs">
-                    <button class="tab active" data-tab="docker">
-                        <span class="tab-icon">🐳</span>
-                        <span class="tab-label">Docker</span>
-                        <span class="tab-badge" id="docker-count">0</span>
-                    </button>
-                    <button class="tab" data-tab="pm2">
-                        <span class="tab-icon">⚡</span>
-                        <span class="tab-label">PM2</span>
-                        <span class="tab-badge" id="pm2-count">0</span>
-                    </button>
-                    <button class="tab" data-tab="node">
-                        <span class="tab-icon">📦</span>
-                        <span class="tab-label">Node.js</span>
-                        <span class="tab-badge" id="node-count">0</span>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Page: Dashboard -->
+            <section class="page active" id="page-dashboard">
+                <div class="page-header">
+                    <h2>📊 System Overview</h2>
+                    <button class="refresh-btn" id="refresh-btn">
+                        <span class="refresh-icon">↻</span>
                     </button>
                 </div>
 
-                <div class="tabs-summary">
-                    <div class="summary-item" id="current-cpu">
-                        <span class="summary-label">CPU</span>
-                        <span class="summary-value">0%</span>
+                <div class="stats-grid">
+                    <!-- CPU Card -->
+                    <div class="stat-card" data-type="cpu">
+                        <div class="card-glow"></div>
+                        <div class="stat-header">
+                            <div class="stat-icon">💻</div>
+                            <span class="stat-label">CPU Usage</span>
+                        </div>
+                        <div class="stat-body">
+                            <div class="circular-progress" id="cpu-circle">
+                                <svg viewBox="0 0 100 100">
+                                    <circle class="progress-bg" cx="50" cy="50" r="45"></circle>
+                                    <circle class="progress-ring" cx="50" cy="50" r="45"></circle>
+                                </svg>
+                                <div class="progress-value">
+                                    <span class="value" id="cpu-usage">0</span>
+                                    <span class="unit">%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-footer">
+                            <div class="stat-detail">
+                                <span class="detail-label">Cores</span>
+                                <span class="detail-value" id="cpu-cores">0</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="detail-label">Model</span>
+                                <span class="detail-value truncate" id="cpu-model">--</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="summary-item" id="current-mem">
-                        <span class="summary-label">Memory</span>
-                        <span class="summary-value">0 MB</span>
-                    </div>
-                </div>
-            </div>
 
-            <div class="tab-panels">
-                <div class="tab-panel active" id="docker-panel">
-                    <div class="app-grid" id="docker-list">
-                        <div class="empty-state">
-                            <span class="empty-icon">🐳</span>
-                            <p>No Docker containers running</p>
+                    <!-- Memory Card -->
+                    <div class="stat-card" data-type="memory">
+                        <div class="card-glow"></div>
+                        <div class="stat-header">
+                            <div class="stat-icon">🧠</div>
+                            <span class="stat-label">Memory</span>
+                        </div>
+                        <div class="stat-body">
+                            <div class="circular-progress" id="memory-circle">
+                                <svg viewBox="0 0 100 100">
+                                    <circle class="progress-bg" cx="50" cy="50" r="45"></circle>
+                                    <circle class="progress-ring" cx="50" cy="50" r="45"></circle>
+                                </svg>
+                                <div class="progress-value">
+                                    <span class="value" id="memory-usage">0</span>
+                                    <span class="unit">%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-footer">
+                            <div class="stat-detail">
+                                <span class="detail-label">Used</span>
+                                <span class="detail-value" id="memory-used">0 GB</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="detail-label">Total</span>
+                                <span class="detail-value" id="memory-total">0 GB</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Disk Card -->
+                    <div class="stat-card" data-type="disk">
+                        <div class="card-glow"></div>
+                        <div class="stat-header">
+                            <div class="stat-icon">💾</div>
+                            <span class="stat-label">Disk Space</span>
+                        </div>
+                        <div class="stat-body">
+                            <div class="circular-progress" id="disk-circle">
+                                <svg viewBox="0 0 100 100">
+                                    <circle class="progress-bg" cx="50" cy="50" r="45"></circle>
+                                    <circle class="progress-ring" cx="50" cy="50" r="45"></circle>
+                                </svg>
+                                <div class="progress-value">
+                                    <span class="value" id="disk-usage">0</span>
+                                    <span class="unit">%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-footer">
+                            <div class="stat-detail">
+                                <span class="detail-label">Used</span>
+                                <span class="detail-value" id="disk-used">0 GB</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="detail-label">Total</span>
+                                <span class="detail-value" id="disk-total">0 GB</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="tab-panel" id="pm2-panel">
-                    <div class="app-grid" id="pm2-list">
-                        <div class="empty-state">
-                            <span class="empty-icon">⚡</span>
-                            <p>No PM2 processes running</p>
+            </section>
+
+            <!-- Page: Applications -->
+            <section class="page" id="page-applications">
+                <div class="page-header">
+                    <h2>🚀 Running Applications</h2>
+                </div>
+
+                <div class="tabs-container">
+                    <div class="tabs">
+                        <button class="tab active" data-tab="docker">
+                            <span class="tab-icon">🐳</span>
+                            <span class="tab-label">Docker</span>
+                            <span class="tab-badge" id="docker-count">0</span>
+                        </button>
+                        <button class="tab" data-tab="pm2">
+                            <span class="tab-icon">⚡</span>
+                            <span class="tab-label">PM2</span>
+                            <span class="tab-badge" id="pm2-count">0</span>
+                        </button>
+                        <button class="tab" data-tab="node">
+                            <span class="tab-icon">📦</span>
+                            <span class="tab-label">Node.js</span>
+                            <span class="tab-badge" id="node-count">0</span>
+                        </button>
+                    </div>
+
+                    <div class="tabs-summary">
+                        <div class="summary-item" id="current-cpu">
+                            <span class="summary-label">CPU</span>
+                            <span class="summary-value">0%</span>
+                        </div>
+                        <div class="summary-item" id="current-mem">
+                            <span class="summary-label">Memory</span>
+                            <span class="summary-value">0 MB</span>
                         </div>
                     </div>
                 </div>
-                <div class="tab-panel" id="node-panel">
-                    <div class="app-grid" id="node-list">
-                        <div class="empty-state">
-                            <span class="empty-icon">📦</span>
-                            <p>No Node.js processes running</p>
+
+                <div class="tab-panels">
+                    <div class="tab-panel active" id="docker-panel">
+                        <div class="app-grid" id="docker-list">
+                            <div class="empty-state">
+                                <span class="empty-icon">🐳</span>
+                                <p>No Docker containers running</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-panel" id="pm2-panel">
+                        <div class="app-grid" id="pm2-list">
+                            <div class="empty-state">
+                                <span class="empty-icon">⚡</span>
+                                <p>No PM2 processes running</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-panel" id="node-panel">
+                        <div class="app-grid" id="node-list">
+                            <div class="empty-state">
+                                <span class="empty-icon">📦</span>
+                                <p>No Node.js processes running</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- System Details -->
-        <section class="details-section">
-            <div class="section-title">
-                <span class="title-icon">⚙️</span>
-                <h2>System Details</h2>
-            </div>
-            <div class="details-grid" id="details-grid">
-                <!-- Populated by JS -->
-            </div>
-        </section>
-
-        <!-- Database Backups Section -->
-        <section class="apps-section">
-            <div class="section-title">
-                <span class="title-icon">💾</span>
-                <h2>Database Backups</h2>
-                <button class="refresh-btn" onclick="dashboard.updateBackups()">🔄 Refresh</button>
-            </div>
-            <div class="backup-grid" id="backup-list">
-                <div class="empty-state">
-                    <span class="empty-icon">💾</span>
-                    <p>Loading backup history...</p>
+            <!-- Page: Network -->
+            <section class="page" id="page-network">
+                <div class="page-header">
+                    <h2>🌐 Network Monitoring</h2>
+                    <button class="refresh-btn" onclick="dashboard.updateNetworkData()">🔄 Refresh</button>
                 </div>
-            </div>
-        </section>
 
-        <!-- Network Monitoring Section -->
-        <section class="apps-section">
-            <div class="section-title">
-                <span class="title-icon">🌐</span>
-                <h2>Network Monitoring</h2>
-                <button class="refresh-btn" onclick="dashboard.updateNetworkData()">🔄 Refresh</button>
-            </div>
-            <div class="network-grid">
-                <div class="network-card backend-card">
-                    <h3>🏢 Backend Health</h3>
-                    <div class="backend-list" id="backend-list">
-                        <div class="empty-state"><span class="empty-icon">🔍</span>
-                            <p>Checking...</p>
+                <div class="network-grid">
+                    <div class="network-card backend-card">
+                        <h3>🏢 Backend Health</h3>
+                        <div class="backend-list" id="backend-list">
+                            <div class="empty-state"><span class="empty-icon">🔍</span>
+                                <p>Checking...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="network-card">
+                        <h3>📡 Ping Status</h3>
+                        <div class="ping-list" id="ping-list">
+                            <div class="empty-state"><span class="empty-icon">📡</span>
+                                <p>Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="network-card">
+                        <h3>📊 Bandwidth</h3>
+                        <div class="bandwidth-stats" id="bandwidth-stats">
+                            <div class="stat-row"><span>Download</span><strong id="rx-speed">0 KB/s</strong></div>
+                            <div class="stat-row"><span>Upload</span><strong id="tx-speed">0 KB/s</strong></div>
+                            <div class="stat-row"><span>Active Connections</span><strong id="active-conn">0</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="network-card">
+                        <h3>🔌 Open Ports</h3>
+                        <div class="ports-list" id="ports-list">
+                            <div class="empty-state"><span class="empty-icon">🔌</span>
+                                <p>Loading...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="network-card">
-                    <h3>📡 Ping Status</h3>
-                    <div class="ping-list" id="ping-list">
-                        <div class="empty-state"><span class="empty-icon">📡</span>
-                            <p>Loading...</p>
+            </section>
+
+            <!-- Page: Backups -->
+            <section class="page" id="page-backups">
+                <div class="page-header">
+                    <h2>💾 Database Backups</h2>
+                    <button class="refresh-btn" onclick="dashboard.updateBackups()">🔄 Refresh</button>
+                </div>
+
+                <div class="backup-grid" id="backup-list">
+                    <div class="empty-state">
+                        <span class="empty-icon">💾</span>
+                        <p>Loading backup history...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Page: Processes -->
+            <section class="page" id="page-processes">
+                <div class="page-header">
+                    <h2>🎛️ Process Management</h2>
+                </div>
+
+                <div class="management-grid">
+                    <div class="management-card">
+                        <h3>Quick Actions</h3>
+                        <div class="action-buttons">
+                            <button class="action-btn" onclick="dashboard.runQuickCommand('uptime')">Uptime</button>
+                            <button class="action-btn" onclick="dashboard.runQuickCommand('free -h')">Memory</button>
+                            <button class="action-btn" onclick="dashboard.runQuickCommand('df -h')">Disk</button>
+                        </div>
+                        <div class="command-output" id="command-output">
+                            <pre>Click a button to run command</pre>
+                        </div>
+                    </div>
+                    <div class="management-card">
+                        <h3>Top Processes</h3>
+                        <div class="top-processes" id="top-processes">
+                            <!-- Populated by JS -->
                         </div>
                     </div>
                 </div>
-                <div class="network-card">
-                    <h3>📊 Bandwidth</h3>
-                    <div class="bandwidth-stats" id="bandwidth-stats">
-                        <div class="stat-row"><span>Download</span><strong id="rx-speed">0 KB/s</strong></div>
-                        <div class="stat-row"><span>Upload</span><strong id="tx-speed">0 KB/s</strong></div>
-                        <div class="stat-row"><span>Active Connections</span><strong id="active-conn">0</strong></div>
-                    </div>
-                </div>
-                <div class="network-card">
-                    <h3>🔌 Open Ports</h3>
-                    <div class="ports-list" id="ports-list">
-                        <div class="empty-state"><span class="empty-icon">🔌</span>
-                            <p>Loading...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Process Management Section -->
-        <section class="apps-section">
-            <div class="section-title">
-                <span class="title-icon">🎛️</span>
-                <h2>Process Management</h2>
-            </div>
-            <div class="management-grid">
-                <div class="management-card">
-                    <h3>Quick Actions</h3>
-                    <div class="action-buttons">
-                        <button class="action-btn" onclick="dashboard.runQuickCommand('uptime')">Uptime</button>
-                        <button class="action-btn" onclick="dashboard.runQuickCommand('free -h')">Memory</button>
-                        <button class="action-btn" onclick="dashboard.runQuickCommand('df -h')">Disk</button>
-                    </div>
-                    <div class="command-output" id="command-output">
-                        <pre>Click a button to run command</pre>
-                    </div>
+            <!-- Page: Settings -->
+            <section class="page" id="page-settings">
+                <div class="page-header">
+                    <h2>⚙️ System Details</h2>
                 </div>
-                <div class="management-card">
-                    <h3>Top Processes</h3>
-                    <div class="top-processes" id="top-processes">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
-            </div>
-        </section>
 
-        <!-- Footer -->
-        <footer class="footer">
-            <p>Health Monitor Dashboard • Built with Node.js</p>
-        </footer>
+                <div class="details-grid" id="details-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
+        </main>
     </div>
 
     <script src="app.js"></script>

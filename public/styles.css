@@ -310,6 +310,60 @@ body {
     overflow: hidden;
 }
 
+/* ===== Usage Charts ===== */
+.charts-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border-glass);
+    border-radius: 24px;
+    padding: 2rem;
+    margin-top: 2rem;
+}
+
+.charts-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.chart-controls {
+    display: flex;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px;
+    border-radius: 12px;
+    gap: 4px;
+}
+
+.chart-btn {
+    padding: 0.5rem 1.25rem;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: var(--transition);
+}
+
+.chart-btn.active {
+    background: var(--accent-blue);
+    color: #000;
+}
+
+.chart-btn:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+}
+
+.chart-container {
+    position: relative;
+    height: 350px;
+    width: 100%;
+}
+
 /* ===== Network Components ===== */
 .backend-list,
 .ping-list {

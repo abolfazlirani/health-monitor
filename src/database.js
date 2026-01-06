@@ -189,6 +189,53 @@ class Database {
     });
   }
 
+  async getMetricsHistory(period = 'day') {
+    let interval;
+    let limit;
+    let timeFormat;
+
+    switch (period) {
+      case 'day':
+        interval = '-24 hours';
+        timeFormat = '%H:00'; // Hourly
+        break;
+      case 'week':
+        interval = '-7 days';
+        timeFormat = '%Y-%m-%d'; // Daily
+        break;
+      case 'month':
+        interval = '-30 days';
+        timeFormat = '%Y-%m-%d'; // Daily
+        break;
+      default:
+        interval = '-24 hours';
+        timeFormat = '%H:00';
+    }
+
+    const sql = `
+      SELECT 
+        strftime('${timeFormat}', timestamp) as time,
+        AVG(cpu_usage) as cpu,
+        AVG(memory_usage) as memory,
+        AVG(disk_usage) as disk
+      FROM metrics 
+      WHERE timestamp >= datetime('now', '${interval}')
+      GROUP BY strftime('${timeFormat}', timestamp)
+      ORDER BY timestamp ASC
+    `;
+
+    return new Promise((resolve, reject) => {
+      this.db.all(sql, [], (err, rows) => {
+        if (err) {
+          console.error('❌ Error fetching history metrics:', err);
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+
   async cleanup(daysToKeep = 7) {
     const sql = `
       DELETE FROM metrics 

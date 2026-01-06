@@ -6,6 +6,9 @@ class HealthDashboard {
         this.updateInterval = 5000;
         this.intervalId = null;
         this.currentPage = 'dashboard';
+        this.historyUrl = '/api/history';
+        this.usageChart = null;
+        this.currentPeriod = 'day';
         this.init();
     }
 
@@ -21,6 +24,7 @@ class HealthDashboard {
         this.updateApplications();
         this.updateDetailedStats();
         this.updateBackups();
+        this.updateHistory();
 
         this.startAutoUpdate();
 
@@ -158,8 +162,20 @@ class HealthDashboard {
                 this.updateHealthData();
                 this.updateApplications();
                 this.updateDetailedStats();
+                this.updateHistory();
             });
         }
+
+        // Chart period buttons
+        const chartBtns = document.querySelectorAll('.chart-btn');
+        chartBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                chartBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentPeriod = btn.dataset.period;
+                this.updateHistory();
+            });
+        });
     }
 
     async fetchData(url) {
@@ -228,6 +244,78 @@ class HealthDashboard {
         const lastUpdate = document.getElementById('last-update');
         if (lastUpdate) {
             lastUpdate.textContent = now.toLocaleTimeString('en-US', { hour12: false });
+        }
+    }
+
+    async updateHistory() {
+        const data = await this.fetchData(`${this.historyUrl}?period=${this.currentPeriod}`);
+        if (!data) return;
+
+        this.renderChart(data);
+    }
+
+    renderChart(data) {
+        const ctx = document.getElementById('usageChart');
+        if (!ctx) return;
+
+        const labels = data.map(d => d.time);
+        const cpuData = data.map(d => d.cpu.toFixed(1));
+        const memData = data.map(d => d.memory.toFixed(1));
+
+        if (this.usageChart) {
+            this.usageChart.data.labels = labels;
+            this.usageChart.data.datasets[0].data = cpuData;
+            this.usageChart.data.datasets[1].data = memData;
+            this.usageChart.update();
+        } else {
+            this.usageChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'CPU Usage %',
+                            data: cpuData,
+                            borderColor: '#00d2ff',
+                            backgroundColor: 'rgba(0, 210, 255, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Memory Usage %',
+                            data: memData,
+                            borderColor: '#3aedc8',
+                            backgroundColor: 'rgba(58, 237, 200, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { color: '#94a3b8', font: { family: 'Inter', weight: '600' } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
         }
     }
 

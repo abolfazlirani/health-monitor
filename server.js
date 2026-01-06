@@ -185,6 +185,16 @@ app.get('/api/backups', async (req, res) => {
   }
 });
 
+app.get('/api/history', async (req, res) => {
+  try {
+    const { period } = req.query;
+    const history = await database.getMetricsHistory(period || 'day');
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/backup/report', async (req, res) => {
   try {
     const { status, date, size, databases, error } = req.body;

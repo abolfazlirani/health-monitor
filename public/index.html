@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -182,6 +183,21 @@
                                 <span class="detail-value" id="disk-total">0 GB</span>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- History Charts Section -->
+                <div class="charts-section">
+                    <div class="section-header">
+                        <h3>📈 Usage Analytics</h3>
+                        <div class="chart-controls">
+                            <button class="chart-btn active" data-period="day">Day</button>
+                            <button class="chart-btn" data-period="week">Week</button>
+                            <button class="chart-btn" data-period="month">Month</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="usageChart"></canvas>
                     </div>
                 </div>
             </section>

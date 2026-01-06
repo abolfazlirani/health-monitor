@@ -13,6 +13,7 @@ class HealthDashboard {
         this.updateHealthData();
         this.updateApplications();
         this.updateDetailedStats();
+        this.updateBackups();
         this.startAutoUpdate();
         this.setupEventListeners();
         this.setupTabs();
@@ -336,6 +337,53 @@ class HealthDashboard {
         if (this.intervalId) {
             clearInterval(this.intervalId);
             this.intervalId = null;
+        }
+    }
+
+    // ==================== BACKUP MANAGEMENT ====================
+
+    async updateBackups() {
+        try {
+            const response = await fetch('/api/backups');
+            const backups = await response.json();
+
+            const container = document.getElementById('backup-list');
+            if (!container) return;
+
+            if (!backups || backups.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <span class="empty-icon">💾</span>
+                        <p>No backups yet</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = backups.map(b => {
+                const date = new Date(b.timestamp);
+                const formattedDate = date.toLocaleDateString('fa-IR') + ' ' +
+                    date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+                const statusClass = b.status === 'success' ? 'status-success' : 'status-failed';
+                const statusIcon = b.status === 'success' ? '✅' : '❌';
+                const databases = b.databases ? b.databases.split(',').join(', ') : 'همه';
+
+                return `
+                    <div class="backup-card ${statusClass}">
+                        <div class="backup-header">
+                            <span class="backup-status">${statusIcon} ${b.status === 'success' ? 'موفق' : 'ناموفق'}</span>
+                            <span class="backup-size">${b.size || '--'}</span>
+                        </div>
+                        <div class="backup-date">${formattedDate}</div>
+                        <div class="backup-details">
+                            <span class="backup-dbs">💿 ${databases}</span>
+                        </div>
+                        ${b.error ? `<div class="backup-error">⚠️ ${b.error}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        } catch (error) {
+            console.error('Error updating backups:', error);
         }
     }
 

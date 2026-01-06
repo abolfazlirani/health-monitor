@@ -174,6 +174,28 @@ app.post('/api/network/check', async (req, res) => {
   }
 });
 
+// ==================== BACKUP MANAGEMENT ====================
+
+app.get('/api/backups', async (req, res) => {
+  try {
+    const backups = await database.getBackups(30);
+    res.json(backups);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/backup/report', async (req, res) => {
+  try {
+    const { status, date, size, databases, error } = req.body;
+    if (!status) return res.status(400).json({ error: 'Status required' });
+    const id = await database.saveBackupReport({ status, date, size, databases, error });
+    res.json({ success: true, id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve dashboard
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

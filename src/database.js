@@ -36,8 +36,20 @@ class Database {
       )
     `;
 
+    const createBackupsTable = `
+      CREATE TABLE IF NOT EXISTS backups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        status TEXT NOT NULL,
+        size TEXT,
+        databases TEXT,
+        error TEXT
+      )
+    `;
+
     const createIndexes = `
       CREATE INDEX IF NOT EXISTS idx_timestamp ON metrics(timestamp DESC);
+      CREATE INDEX IF NOT EXISTS idx_backup_timestamp ON backups(timestamp DESC);
     `;
 
     return new Promise((resolve, reject) => {
@@ -46,13 +58,20 @@ class Database {
           console.error('❌ Error creating metrics table:', err);
           reject(err);
         } else {
-          this.db.run(createIndexes, (err) => {
+          this.db.run(createBackupsTable, (err) => {
             if (err) {
-              console.error('❌ Error creating indexes:', err);
+              console.error('❌ Error creating backups table:', err);
               reject(err);
             } else {
-              console.log('✅ Database tables ready');
-              resolve();
+              this.db.run(createIndexes, (err) => {
+                if (err) {
+                  console.error('❌ Error creating indexes:', err);
+                  reject(err);
+                } else {
+                  console.log('✅ Database tables ready');
+                  resolve();
+                }
+              });
             }
           });
         }
@@ -184,6 +203,46 @@ class Database {
         } else {
           console.log(`✅ Cleaned up ${this.changes} old metric records`);
           resolve(this.changes);
+        }
+      });
+    });
+  }
+
+  // ==================== BACKUP METHODS ====================
+
+  async saveBackupReport({ status, date, size, databases, error }) {
+    const sql = `
+      INSERT INTO backups (status, size, databases, error)
+      VALUES (?, ?, ?, ?)
+    `;
+
+    return new Promise((resolve, reject) => {
+      this.db.run(sql, [status, size, databases, error || null], function (err) {
+        if (err) {
+          console.error('❌ Error saving backup report:', err);
+          reject(err);
+        } else {
+          console.log(`✅ Backup report saved: ${status}`);
+          resolve(this.lastID);
+        }
+      });
+    });
+  }
+
+  async getBackups(limit = 30) {
+    const sql = `
+      SELECT * FROM backups 
+      ORDER BY timestamp DESC 
+      LIMIT ?
+    `;
+
+    return new Promise((resolve, reject) => {
+      this.db.all(sql, [limit], (err, rows) => {
+        if (err) {
+          console.error('❌ Error fetching backups:', err);
+          reject(err);
+        } else {
+          resolve(rows);
         }
       });
     });

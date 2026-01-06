@@ -221,6 +221,21 @@
             </div>
         </section>
 
+        <!-- Database Backups Section -->
+        <section class="apps-section">
+            <div class="section-title">
+                <span class="title-icon">💾</span>
+                <h2>Database Backups</h2>
+                <button class="refresh-btn" onclick="dashboard.updateBackups()">🔄 Refresh</button>
+            </div>
+            <div class="backup-grid" id="backup-list">
+                <div class="empty-state">
+                    <span class="empty-icon">💾</span>
+                    <p>Loading backup history...</p>
+                </div>
+            </div>
+        </section>
+
         <!-- Network Monitoring Section -->
         <section class="apps-section">
             <div class="section-title">
